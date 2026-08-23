@@ -195,8 +195,8 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     </details>
   </footer>
 
-  <script src="./app.js?v=20260822-fin-int-3"></script>
-  <script src="./solicitud-integracion.js?v=20260822-fin-int-3"></script>
-  <script src="./solicitud-precarga-fallback.js?v=20260822-fin-int-3"></script>
+  <script src="./app.js?v=20260822-fin-int-4"></script>
+  <script src="./solicitud-integracion.js?v=20260822-fin-int-4"></script>
+  <script src="./solicitud-precarga-fallback.js?v=20260822-fin-int-4"></script>
 </body>
 </html>
