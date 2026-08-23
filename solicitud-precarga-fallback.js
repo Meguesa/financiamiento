@@ -5,99 +5,238 @@
   if (params.get('integracion') !== 'solicitud') return;
 
   const STORAGE_LATEST = 'JDJP_FINANCIAMIENTO_PREFILL_LATEST';
-
-  function setValue(id, value) {
-    const control = document.getElementById(id);
-    if (control) control.value = value == null ? '' : String(value);
-  }
+  const STORAGE_PREFIX = 'JDJP_FINANCIAMIENTO_PREFILL_';
+  const BRIDGE_ID = String(params.get('bridge') || '').trim();
 
   function numero(value) {
-    const n = Number(value || 0);
+    const n = Number(value ?? 0);
     return Number.isFinite(n) ? n : 0;
   }
 
-  function aplicar(data) {
-    if (!data || typeof data !== 'object') return false;
-    const folio = String(data.folio || '').trim().toUpperCase();
-    if (!/^SV-\d{4}-\d+$/.test(folio)) return false;
+  function texto(value) {
+    return String(value ?? '').trim();
+  }
 
-    setValue('cliente', data.cliente || '');
-    setValue('producto', data.producto || '');
-    setValue('total', numero(data.total) > 0 ? numero(data.total).toFixed(2) : '');
-    setValue('engancheMonto', numero(data.enganche) >= 0 ? numero(data.enganche).toFixed(2) : '');
-    setValue('tasaAnual', numero(data.tasaAnualPct) > 0 ? numero(data.tasaAnualPct).toFixed(2) : '');
-    setValue('meses', numero(data.meses) > 0 ? String(Math.trunc(numero(data.meses))) : '');
+  function setValue(id, value) {
+    const control = document.getElementById(id);
+    if (!control) return false;
 
-    if (String(data.primerPago || '').match(/^\d{4}-\d{2}-\d{2}$/)) {
-      setValue('primerPago', data.primerPago);
+    const next = value == null ? '' : String(value);
+    if (control.value !== next) {
+      control.value = next;
+      try { control.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+      try { control.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
     }
+    return true;
+  }
+
+  function normalizar(data) {
+    if (!data || typeof data !== 'object') return null;
+
+    const folio = texto(data.folio).toUpperCase();
+    if (!/^SV-\d{4}-\d+$/.test(folio)) return null;
 
     const total = numero(data.total);
-    const enganche = numero(data.enganche);
-    if (total > 0 && enganche >= 0) {
-      setValue('enganchePct', ((enganche / total) * 100).toFixed(2));
+    if (!(total > 0)) return null;
+
+    return {
+      folio,
+      cliente: texto(data.cliente),
+      producto: texto(data.producto),
+      total,
+      enganche: Math.max(0, numero(data.enganche)),
+      tasaAnualPct: Math.max(0, numero(data.tasaAnualPct)),
+      meses: Math.max(0, Math.trunc(numero(data.meses))),
+      primerPago: texto(data.primerPago)
+    };
+  }
+
+  function aplicar(data, fuente) {
+    const d = normalizar(data);
+    if (!d) return false;
+
+    const controlesListos =
+      document.getElementById('cliente') &&
+      document.getElementById('producto') &&
+      document.getElementById('total') &&
+      document.getElementById('engancheMonto') &&
+      document.getElementById('enganchePct') &&
+      document.getElementById('tasaAnual') &&
+      document.getElementById('meses') &&
+      document.getElementById('primerPago');
+
+    if (!controlesListos) return false;
+
+    setValue('cliente', d.cliente);
+    setValue('producto', d.producto);
+    setValue('total', d.total.toFixed(2));
+    setValue('engancheMonto', d.enganche.toFixed(2));
+    setValue('enganchePct', ((d.enganche / d.total) * 100).toFixed(2));
+    setValue('tasaAnual', d.tasaAnualPct > 0 ? d.tasaAnualPct.toFixed(2) : '');
+    setValue('meses', d.meses > 0 ? String(d.meses) : '');
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d.primerPago)) {
+      setValue('primerPago', d.primerPago);
     }
 
+    document.body.dataset.solicitudFolio = d.folio;
+    document.body.dataset.solicitudPrefillSource = fuente || 'desconocida';
+
     const folioControl = document.getElementById('finSolicitudFolio');
-    if (folioControl) folioControl.textContent = folio;
+    if (folioControl) folioControl.textContent = d.folio;
 
     const status = document.getElementById('finSolicitudStatus');
     if (status) {
       status.className = 'fin-solicitud-status ok';
-      status.textContent = `Datos precargados para ${folio}. Completa tasa, plazo o fecha si es necesario y pulsa Calcular.`;
+      status.textContent = `Datos precargados para ${d.folio}. Revisa la corrida y pulsa Calcular.`;
     }
 
-    console.info('[Financiamiento] Precarga recuperada desde Solicitud de Venta:', folio);
+    console.info('[Financiamiento] Precarga aplicada correctamente.', {
+      fuente,
+      folio: d.folio,
+      cliente: d.cliente,
+      producto: d.producto,
+      total: d.total,
+      enganche: d.enganche,
+      tasa: d.tasaAnualPct,
+      meses: d.meses,
+      primerPago: d.primerPago
+    });
+
     return true;
   }
 
   function dataDesdeUrl() {
-    const folio = String(params.get('folio') || '').trim().toUpperCase();
-    const total = numero(params.get('total'));
-    if (!/^SV-\d{4}-\d+$/.test(folio) || !(total > 0)) return null;
+    const folio = texto(params.get('folio')).toUpperCase();
+    if (!/^SV-\d{4}-\d+$/.test(folio)) return null;
 
-    return {
-      version: 3,
+    return normalizar({
       folio,
       cliente: params.get('cliente') || '',
       producto: params.get('producto') || '',
-      total,
-      enganche: Math.max(0, numero(params.get('enganche'))),
-      tasaAnualPct: Math.max(0, numero(params.get('tasa'))),
-      meses: Math.max(0, Math.trunc(numero(params.get('meses')))),
+      total: params.get('total'),
+      enganche: params.get('enganche'),
+      tasaAnualPct: params.get('tasa'),
+      meses: params.get('meses'),
       primerPago: params.get('primerPago') || ''
-    };
+    });
   }
 
-  function dataDesdeStorage() {
+  function leerEnvelope(raw) {
+    if (!raw) return null;
     try {
-      const raw = localStorage.getItem(STORAGE_LATEST);
-      if (!raw) return null;
       const envelope = JSON.parse(raw);
-      if (!envelope?.data) return null;
-      if (Number(envelope.expiresAt || 0) > 0 && Date.now() > Number(envelope.expiresAt)) {
-        try { localStorage.removeItem(STORAGE_LATEST); } catch (_) {}
-        return null;
-      }
-      return envelope.data;
-    } catch (error) {
-      console.warn('[Financiamiento] No fue posible leer la precarga temporal:', error);
+      const expiresAt = numero(envelope?.expiresAt);
+      if (expiresAt > 0 && Date.now() > expiresAt) return null;
+      return normalizar(envelope?.data || null);
+    } catch (_) {
       return null;
     }
   }
 
+  function dataDesdeStorage() {
+    try {
+      if (BRIDGE_ID) {
+        const bridgeData = leerEnvelope(localStorage.getItem(`${STORAGE_PREFIX}${BRIDGE_ID}`));
+        if (bridgeData) return bridgeData;
+      }
+      return leerEnvelope(localStorage.getItem(STORAGE_LATEST));
+    } catch (error) {
+      console.warn('[Financiamiento] No fue posible leer storage:', error);
+      return null;
+    }
+  }
+
+  function valueFromOpener(doc, id) {
+    return texto(doc.getElementById(id)?.value);
+  }
+
+  function numeroFromOpener(doc, id) {
+    return numero(valueFromOpener(doc, id));
+  }
+
+  function dataDesdeOpener() {
+    try {
+      if (!window.opener || window.opener.closed) return null;
+      const doc = window.opener.document;
+      if (!doc) return null;
+
+      let folio = texto(params.get('folio')).toUpperCase();
+      if (!/^SV-\d{4}-\d+$/.test(folio)) {
+        folio = texto(doc.querySelector('.folio-box strong')?.textContent).toUpperCase();
+      }
+      if (!/^SV-\d{4}-\d+$/.test(folio)) return null;
+
+      const cliente = [
+        valueFromOpener(doc, 'clienteNombres'),
+        valueFromOpener(doc, 'clienteApellidoPaterno'),
+        valueFromOpener(doc, 'clienteApellidoMaterno')
+      ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+
+      const producto = [
+        valueFromOpener(doc, 'paquete'),
+        valueFromOpener(doc, 'tipoVentaProcap')
+      ].filter(Boolean).join(' · ');
+
+      return normalizar({
+        folio,
+        cliente,
+        producto,
+        total: numeroFromOpener(doc, 'precioTotal'),
+        enganche: Math.max(0, numeroFromOpener(doc, 'enganche')),
+        tasaAnualPct: Math.max(0, numeroFromOpener(doc, 'interesFinanciamiento')),
+        meses: Math.max(0, Math.trunc(numeroFromOpener(doc, 'mensualidades'))),
+        primerPago: valueFromOpener(doc, 'fechaPrimerVencimiento')
+      });
+    } catch (error) {
+      console.warn('[Financiamiento] No fue posible leer directamente la Solicitud:', error);
+      return null;
+    }
+  }
+
+  function obtenerData() {
+    const desdeUrl = dataDesdeUrl();
+    if (desdeUrl) return { data: desdeUrl, fuente: 'URL' };
+
+    const desdeStorage = dataDesdeStorage();
+    if (desdeStorage) return { data: desdeStorage, fuente: 'storage' };
+
+    const desdeOpener = dataDesdeOpener();
+    if (desdeOpener) return { data: desdeOpener, fuente: 'Solicitud abierta' };
+
+    return null;
+  }
+
   function iniciar() {
-    const data = dataDesdeUrl() || dataDesdeStorage();
-    if (!data) return;
+    console.info('[Financiamiento] Iniciando precarga resiliente de Solicitud de Venta.');
 
     let intentos = 0;
-    const timer = window.setInterval(() => {
+    let exitosConsecutivos = 0;
+
+    const intentar = () => {
       intentos += 1;
-      const listo = document.getElementById('total') && document.getElementById('engancheMonto');
-      if (!listo && intentos < 30) return;
-      window.clearInterval(timer);
-      if (listo) aplicar(data);
-    }, 100);
+      const encontrado = obtenerData();
+      const ok = encontrado ? aplicar(encontrado.data, encontrado.fuente) : false;
+
+      if (ok) exitosConsecutivos += 1;
+      else exitosConsecutivos = 0;
+
+      // Reaplicar varias veces evita que otro script inicializador borre los valores después.
+      if (exitosConsecutivos >= 5 || intentos >= 60) {
+        window.clearInterval(timer);
+        if (!ok) {
+          console.warn('[Financiamiento] No fue posible obtener datos para la precarga después de varios intentos.', {
+            folioURL: params.get('folio'),
+            totalURL: params.get('total'),
+            bridge: BRIDGE_ID,
+            openerDisponible: Boolean(window.opener && !window.opener.closed)
+          });
+        }
+      }
+    };
+
+    intentar();
+    const timer = window.setInterval(intentar, 200);
   }
 
   if (document.readyState === 'loading') {
