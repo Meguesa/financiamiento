@@ -1,0 +1,82 @@
+name: Publicar Financiamiento independiente en cPanel
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'index.php'
+      - 'app.js'
+      - 'styles.css'
+      - 'portal-integration.css'
+      - 'account-menu.css'
+      - 'manifest.webmanifest'
+      - 'sw.js'
+      - 'assets/**'
+      - 'icons/**'
+      - '.deploy-trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-financiamiento-independiente
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Validar y publicar /financiamiento
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Preparar PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Validar archivos requeridos
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s index.php
+          test -s app.js
+          test -s styles.css
+          test -s portal-integration.css
+          test -s account-menu.css
+          test -s assets/logo.jpg
+          test -s icons/icon-192.png
+          test -s icons/icon-512.png
+          php -l index.php
+          grep -q 'Simulación de Abono a Capital' index.php
+          grep -q 'btnCompartir' app.js
+          grep -q 'firmaCanvas' app.js
+
+      - name: Preparar paquete de publicacion
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deploy
+          cp index.php app.js styles.css portal-integration.css account-menu.css manifest.webmanifest sw.js deploy/
+          cp -R assets deploy/assets
+          cp -R icons deploy/icons
+
+      - name: Publicar directamente en /financiamiento
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          security: strict
+          timeout: 120000
+          local-dir: ./deploy/
+          server-dir: ./financiamiento/
+          dry-run: false
+          log-level: standard
