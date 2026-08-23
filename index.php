@@ -15,12 +15,12 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ventas con Financiamiento | Portal JdJP</title>
-    <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./portal-integration.css" />
   <link rel="stylesheet" href="./account-menu.css" />
   <meta name="theme-color" content="#111111" />
 
-  <!-- PDF (CDN). Si quieres 100% offline, luego te explico cómo “empaquetarlos” local. -->
+  <!-- PDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -38,7 +38,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
       <a class="portal-toolbar-link" href="/">Regresar al portal</a>
       <details class="account-menu">
         <summary class="account-trigger" aria-label="Abrir menú de usuario" title="<?= $name ?>">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
         </summary>
         <div class="account-menu-panel">
           <div class="account-menu-info"><strong><?= $name ?></strong><span><?= $email ?></span></div>
@@ -60,8 +60,8 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
         </label>
 
         <label class="field">
-          <span>¨Productos</span>
-          <input id="producto" type="text" placeholder="Ej. Oro, Platino, VIP, etc. " maxlength="60" />
+          <span>Productos</span>
+          <input id="producto" type="text" placeholder="Ej. Oro, Platino, VIP, etc." maxlength="60" />
         </label>
         
         <label class="field">
@@ -98,7 +98,6 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
           <input id="primerPago" type="date" />
         </label>
         
-
         <label class="field">
           <span>IVA (%)</span>
           <input id="ivaPct" value="16" readonly inputmode="numeric">
@@ -117,7 +116,6 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
       </div>
     </section>
 
-    <!-- ABONO A CAPITAL -->
     <section class="card">
       <button id="togglePagos" class="accordion-header" type="button" aria-expanded="false" aria-controls="panelPagos">
         <span class="acc-title">Simulación de Abono a Capital</span>
@@ -130,19 +128,17 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
           a partir del pago donde se aplica el abono.
         </p>
         
-          <label class="field">
-            <span># de Pago donde se hará el abono</span>
-            <input id="abonoPago" type="number" inputmode="numeric" placeholder="Ej. 5" min="1" step="1" />
-            <small>Ejemplo: 5 = en el 5to pago.</small>
-            <div class="spacer-8></div>
-          </label>
+        <label class="field">
+          <span># de Pago donde se hará el abono</span>
+          <input id="abonoPago" type="number" inputmode="numeric" placeholder="Ej. 5" min="1" step="1" />
+          <small>Ejemplo: 5 = en el 5to pago.</small>
+        </label>
     
-          <label class="field">
-            <span>Abono adicional (con IVA)</span>
-            <input id="abonoExtra" type="number" inputmode="decimal" placeholder="Ej. 5000" min="0" step="0.01" />
-            <small>Se suma al pago de ese mes.</small>
-          </label>
-        </div>
+        <label class="field">
+          <span>Abono adicional (con IVA)</span>
+          <input id="abonoExtra" type="number" inputmode="decimal" placeholder="Ej. 5000" min="0" step="0.01" />
+          <small>Se suma al pago de ese mes.</small>
+        </label>
     
         <div class="actions">
           <button id="btnSimularAbono" class="btn primary">Simular abono a capital</button>
@@ -151,47 +147,21 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
       </div>
     </section>
 
-    <!-- RESUMEN -->
     <section class="card">
       <h2>Resumen</h2>
       <div class="summary">
-        <div class="summary-item">
-          <div class="k">Pago Inicial</div>
-          <div class="v" id="resEnganche">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="k">Subtotal (sin IVA)</div>
-          <div class="v" id="resSubtotal">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="k">IVA total</div>
-          <div class="v" id="resIva">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="k">Monto a financiar</div>
-          <div class="v" id="resFinanciar">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="k">Mensualidad (aprox.)</div>
-          <div class="v" id="resMensualidad">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="k">Monto final financiado</div>
-          <div class="v" id="resTotalFin">—</div>
-        </div>
+        <div class="summary-item"><div class="k">Pago Inicial</div><div class="v" id="resEnganche">—</div></div>
+        <div class="summary-item"><div class="k">Subtotal (sin IVA)</div><div class="v" id="resSubtotal">—</div></div>
+        <div class="summary-item"><div class="k">IVA total</div><div class="v" id="resIva">—</div></div>
+        <div class="summary-item"><div class="k">Monto a financiar</div><div class="v" id="resFinanciar">—</div></div>
+        <div class="summary-item"><div class="k">Mensualidad (aprox.)</div><div class="v" id="resMensualidad">—</div></div>
+        <div class="summary-item"><div class="k">Monto final financiado</div><div class="v" id="resTotalFin">—</div></div>
       </div>
 
       <div class="sig-wrap">
         <div class="sig-label">Firma del Cliente (opcional)</div>
-      
-        <div class="sig-box">
-          <canvas id="firmaCanvas" class="sig-canvas"></canvas>
-        </div>
-      
-        <div class="sig-actions">
-          <button id="btnLimpiarFirma" class="btn" type="button">Limpiar firma</button>
-        </div>
-      
+        <div class="sig-box"><canvas id="firmaCanvas" class="sig-canvas"></canvas></div>
+        <div class="sig-actions"><button id="btnLimpiarFirma" class="btn" type="button">Limpiar firma</button></div>
         <small class="muted">La firma se incluirá en el PDF al generar o compartir.</small>
       </div>
 
@@ -199,7 +169,6 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
         <button id="btnPDF" class="btn primary" disabled>Generar PDF</button>
         <button id="btnCompartir" class="btn primary" disabled>Compartir</button>
       </div>
-      
     </section>
 
     <section class="card">
@@ -208,40 +177,25 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
         <table id="tabla">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Fecha</th>
-              <th>Saldo inicial (sin IVA)</th>
-              <th>Abono capital</th>
-              <th>Interés</th>
-              <th>IVA</th>
-              <th>Pago</th>
-              <th>Saldo final</th>
+              <th>#</th><th>Fecha</th><th>Saldo inicial (sin IVA)</th><th>Abono capital</th><th>Interés</th><th>IVA</th><th>Pago</th><th>Saldo final</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
-      <div class="hint">
-        * La corrida se calcula sobre el monto “sin IVA” y luego agrega IVA al pago (según el modo elegido).
-      </div>
+      <div class="hint">* La corrida se calcula sobre el monto “sin IVA” y luego agrega IVA al pago (según el modo elegido).</div>
     </section>
   </main>
 
   <footer class="footer">
     <span>Hecho para uso móvil · Sin licencias</span>
-
     <details class="legal">
       <summary>Legal</summary>
-      <p>
-        <strong>LEGAL:</strong> Documento para fines informativos y de <strong>simulación</strong> de financiamiento.
-        La tasa es <strong>fija</strong> y el cálculo considera <strong>IVA sobre capital e interés</strong> según el modo seleccionado.
-        Sujeto a validación y condiciones comerciales de <strong>MEGUESA S.A. de C.V.</strong>.
-        No constituye contrato ni obligación de otorgar financiamiento.
-      </p>
+      <p><strong>LEGAL:</strong> Documento para fines informativos y de <strong>simulación</strong> de financiamiento. La tasa es <strong>fija</strong> y el cálculo considera <strong>IVA sobre capital e interés</strong> según el modo seleccionado. Sujeto a validación y condiciones comerciales de <strong>MEGUESA S.A. de C.V.</strong>. No constituye contrato ni obligación de otorgar financiamiento.</p>
     </details>
   </footer>
 
-
-  <script src="./app.js"></script>
+  <script src="./app.js?v=20260822-fin-int-1"></script>
+  <script src="./solicitud-integracion.js?v=20260822-fin-int-1"></script>
 </body>
 </html>
