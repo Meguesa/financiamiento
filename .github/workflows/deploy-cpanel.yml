@@ -16,6 +16,7 @@ on:
       - 'assets/**'
       - 'icons/**'
       - '.deploy-trigger'
+      - '.github/workflows/deploy-cpanel.yml'
 
 permissions:
   contents: read
@@ -26,7 +27,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Validar y publicar /financiamiento
+    name: Validar y publicar Financiamiento
     runs-on: ubuntu-latest
     timeout-minutes: 12
 
@@ -66,7 +67,7 @@ jobs:
           cp -R assets deploy/assets
           cp -R icons deploy/icons
 
-      - name: Publicar directamente en /financiamiento
+      - name: Publicar en raiz FTP exclusiva de Financiamiento
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -77,6 +78,6 @@ jobs:
           security: strict
           timeout: 120000
           local-dir: ./deploy/
-          server-dir: ./financiamiento/
+          server-dir: ./
           dry-run: false
           log-level: standard
