@@ -24,7 +24,7 @@
     setValue('cliente', data.cliente || '');
     setValue('producto', data.producto || '');
     setValue('total', numero(data.total) > 0 ? numero(data.total).toFixed(2) : '');
-    setValue('engancheMonto', numero(data.enganche) > 0 ? numero(data.enganche).toFixed(2) : '');
+    setValue('engancheMonto', numero(data.enganche) >= 0 ? numero(data.enganche).toFixed(2) : '');
     setValue('tasaAnual', numero(data.tasaAnualPct) > 0 ? numero(data.tasaAnualPct).toFixed(2) : '');
     setValue('meses', numero(data.meses) > 0 ? String(Math.trunc(numero(data.meses))) : '');
 
@@ -51,21 +51,44 @@
     return true;
   }
 
-  function iniciar() {
-    let envelope = null;
+  function dataDesdeUrl() {
+    const folio = String(params.get('folio') || '').trim().toUpperCase();
+    const total = numero(params.get('total'));
+    if (!/^SV-\d{4}-\d+$/.test(folio) || !(total > 0)) return null;
+
+    return {
+      version: 3,
+      folio,
+      cliente: params.get('cliente') || '',
+      producto: params.get('producto') || '',
+      total,
+      enganche: Math.max(0, numero(params.get('enganche'))),
+      tasaAnualPct: Math.max(0, numero(params.get('tasa'))),
+      meses: Math.max(0, Math.trunc(numero(params.get('meses')))),
+      primerPago: params.get('primerPago') || ''
+    };
+  }
+
+  function dataDesdeStorage() {
     try {
       const raw = localStorage.getItem(STORAGE_LATEST);
-      if (raw) envelope = JSON.parse(raw);
+      if (!raw) return null;
+      const envelope = JSON.parse(raw);
+      if (!envelope?.data) return null;
+      if (Number(envelope.expiresAt || 0) > 0 && Date.now() > Number(envelope.expiresAt)) {
+        try { localStorage.removeItem(STORAGE_LATEST); } catch (_) {}
+        return null;
+      }
+      return envelope.data;
     } catch (error) {
       console.warn('[Financiamiento] No fue posible leer la precarga temporal:', error);
-      return;
+      return null;
     }
+  }
 
-    if (!envelope?.data) return;
-    if (Number(envelope.expiresAt || 0) > 0 && Date.now() > Number(envelope.expiresAt)) {
-      try { localStorage.removeItem(STORAGE_LATEST); } catch (_) {}
-      return;
-    }
+  function iniciar() {
+    const data = dataDesdeUrl() || dataDesdeStorage();
+    if (!data) return;
 
     let intentos = 0;
     const timer = window.setInterval(() => {
@@ -73,7 +96,7 @@
       const listo = document.getElementById('total') && document.getElementById('engancheMonto');
       if (!listo && intentos < 30) return;
       window.clearInterval(timer);
-      if (listo) aplicar(envelope.data);
+      if (listo) aplicar(data);
     }, 100);
   }
 
