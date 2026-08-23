@@ -1,0 +1,266 @@
+/* Integracion visual local de Ventas con Financiamiento al Portal JdJP */
+:root{
+  --bg:#f7f5f0;
+  --card:#ffffff;
+  --muted:#6d655f;
+  --text:#241d19;
+  --line:#e8e1d8;
+  --accent:#3a1109;
+  --accent2:#5b281d;
+  --jp-blue:#225b8a;
+  --jp-blue-dark:#19496f;
+  --jp-gold:#fdbb2d;
+  --jp-brown:#3a1109;
+  --jp-cream:#f7f5f0;
+  --radius:12px;
+}
+
+html,body{
+  font-family:"Poppins","Montserrat","Segoe UI",Arial,sans-serif;
+}
+
+body.financing-page{
+  background:var(--jp-cream);
+  color:var(--text);
+}
+
+.portal-toolbar{
+  position:sticky;
+  top:0;
+  z-index:30;
+  color:var(--jp-brown);
+  background:#fff;
+  border-top:38px solid var(--jp-blue);
+  border-bottom:3px solid var(--jp-gold);
+  box-shadow:0 7px 22px rgba(58,17,9,.08);
+}
+
+.portal-toolbar::before{
+  content:"Portal empresarial seguro para colaboradores";
+  position:absolute;
+  top:-38px;
+  left:max(18px,calc((100% - 1180px)/2));
+  height:38px;
+  display:flex;
+  align-items:center;
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.02em;
+}
+
+.portal-toolbar-inner{
+  width:min(1180px,calc(100% - 36px));
+  min-height:92px;
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+}
+
+.portal-toolbar-title-wrap{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  min-width:0;
+}
+
+.portal-toolbar-logo{
+  width:auto;
+  height:64px;
+  flex:0 0 auto;
+  display:block;
+  object-fit:contain;
+}
+
+.portal-toolbar-title{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  min-width:0;
+}
+
+.portal-toolbar-title strong{
+  color:var(--jp-brown);
+  font-size:20px;
+}
+
+.portal-toolbar-title span{
+  color:var(--jp-blue);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.04em;
+}
+
+.portal-toolbar-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.portal-toolbar-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:40px;
+  padding:0 15px;
+  border:1px solid #d9ccc5;
+  border-radius:8px;
+  color:var(--jp-brown);
+  text-decoration:none;
+  font-size:13px;
+  font-weight:800;
+  background:#fff;
+  transition:background .18s ease,border-color .18s ease,color .18s ease;
+}
+
+.portal-toolbar-link:hover,
+.portal-toolbar-link:focus-visible{
+  color:var(--jp-brown);
+  background:var(--jp-gold);
+  border-color:var(--jp-gold);
+  outline:none;
+}
+
+.app-header{
+  display:none!important;
+}
+
+.container{
+  max-width:1000px;
+  padding-top:30px;
+  padding-bottom:34px;
+}
+
+.card{
+  border:1px solid var(--line);
+  border-top:4px solid var(--jp-gold);
+  border-radius:5px 5px 14px 14px;
+  box-shadow:0 13px 34px rgba(58,17,9,.08);
+}
+
+.card h2,
+.accordion-header .acc-title{
+  color:var(--jp-brown);
+}
+
+.field span,
+.field small,
+.muted,
+.hint{
+  color:var(--muted);
+}
+
+input,select{
+  border-color:#ddd4cc;
+  border-radius:9px;
+}
+
+input:focus,select:focus{
+  border-color:rgba(34,91,138,.72);
+  box-shadow:0 0 0 3px rgba(34,91,138,.14);
+}
+
+input[readonly]{
+  background:#f2efea;
+}
+
+.btn{
+  border-radius:8px;
+  font-weight:700;
+}
+
+.btn.primary{
+  color:var(--jp-brown);
+  background:linear-gradient(180deg,#ffc845,var(--jp-gold));
+  border-color:rgba(234,170,0,.55);
+  box-shadow:0 5px 12px rgba(234,170,0,.16);
+}
+
+.btn.primary:hover,
+.btn.primary:focus-visible{
+  background:linear-gradient(180deg,#ffd467,#f4b51d);
+  outline:none;
+}
+
+.summary-item{
+  border-color:var(--line);
+  border-radius:10px;
+  background:#fff;
+}
+
+.summary-item .k{ color:var(--muted); }
+.summary-item .v{ color:var(--jp-brown); }
+
+.table-wrap{
+  border-color:var(--line);
+  border-radius:10px;
+}
+
+thead th{
+  color:var(--jp-brown);
+  background:#fff6dc;
+}
+
+tbody tr:hover{ background:#faf7f1; }
+.sig-box{ border-color:var(--line); }
+
+.footer{
+  color:rgba(255,255,255,.82);
+  background:var(--jp-brown);
+  border-top:4px solid var(--jp-gold);
+}
+
+.footer .legal summary,
+.footer .legal p{ color:rgba(255,255,255,.82); }
+
+@media(max-width:720px){
+  .portal-toolbar{ border-top-width:42px; }
+
+  .portal-toolbar::before{
+    top:-42px;
+    height:42px;
+    left:14px;
+    right:14px;
+  }
+
+  .portal-toolbar-inner{
+    min-height:0;
+    align-items:flex-start;
+    flex-direction:column;
+    padding:14px 0;
+  }
+
+  .portal-toolbar-title-wrap{
+    width:100%;
+  }
+
+  .portal-toolbar-logo{
+    height:56px;
+  }
+
+  .portal-toolbar-actions{
+    width:100%;
+    justify-content:space-between;
+  }
+}
+
+@media(max-width:520px){
+  .portal-toolbar-title strong{
+    font-size:18px;
+  }
+
+  .portal-toolbar-title span{
+    line-height:1.4;
+  }
+
+  .portal-toolbar-actions{
+    align-items:center;
+  }
+
+  .portal-toolbar-link{
+    flex:1 1 auto;
+  }
+}
