@@ -151,3 +151,6 @@ jobs:
             git commit -m 'Migrar version productiva de Financiamiento al repo propio'
             git push origin HEAD:main
           fi
+
+      - name: Confirmar disparo de migracion
+        run: echo 'Workflow de migracion ejecutado desde main.'
