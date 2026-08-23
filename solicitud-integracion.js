@@ -15,6 +15,8 @@
 
   let contexto = null;
   let aplicando = false;
+  let readyTimer = null;
+  let readyAttempts = 0;
 
   function iniciar() {
     const resumen = document.querySelector('.summary')?.closest('.card');
@@ -28,9 +30,48 @@
     window.addEventListener('message', recibirMensaje);
 
     if (window.opener && !window.opener.closed) {
-      window.opener.postMessage({ type: MSG_READY }, ORIGIN);
+      iniciarHandshake();
     } else {
       estado('Esta ventana de integración ya no está conectada con una Solicitud de Venta.', 'warn');
+    }
+  }
+
+  function iniciarHandshake() {
+    detenerHandshake();
+    readyAttempts = 0;
+
+    const enviarReady = () => {
+      if (contexto) {
+        detenerHandshake();
+        return;
+      }
+      if (!window.opener || window.opener.closed) {
+        detenerHandshake();
+        estado('La ventana de Solicitud de Venta ya no está disponible.', 'warn');
+        return;
+      }
+
+      readyAttempts += 1;
+      try {
+        window.opener.postMessage({ type: MSG_READY, attempt: readyAttempts }, ORIGIN);
+      } catch (_) {}
+
+      if (readyAttempts >= 25) {
+        detenerHandshake();
+        if (!contexto) {
+          estado('No fue posible recibir automáticamente los datos de la Solicitud de Venta. Regresa a la solicitud y pulsa nuevamente Calcular financiamiento.', 'warn');
+        }
+      }
+    };
+
+    enviarReady();
+    readyTimer = window.setInterval(enviarReady, 400);
+  }
+
+  function detenerHandshake() {
+    if (readyTimer) {
+      window.clearInterval(readyTimer);
+      readyTimer = null;
     }
   }
 
@@ -73,6 +114,7 @@
 
     if (msg.type === MSG_PREFILL) {
       contexto = msg.data || {};
+      detenerHandshake();
       precargar(contexto);
       return;
     }
@@ -185,7 +227,11 @@
     if (!boton) return;
     boton.disabled = aplicando || !lastResult || !contexto?.folio;
   }, 350);
-  window.addEventListener('beforeunload', () => window.clearInterval(activarCuandoHayaResultado));
+
+  window.addEventListener('beforeunload', () => {
+    window.clearInterval(activarCuandoHayaResultado);
+    detenerHandshake();
+  });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar, { once: true });
   else iniciar();
