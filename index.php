@@ -195,7 +195,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     </details>
   </footer>
 
-  <script src="./app.js?v=20260822-fin-int-5"></script>
+  <script src="./app.js?v=20260823-fin-int-6"></script>
   <script>
   (() => {
     'use strict';
@@ -218,7 +218,10 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
 
     const setValue = (id, value) => {
       const control = document.getElementById(id);
-      if (control) control.value = value == null ? '' : String(value);
+      if (!control) return;
+      control.value = value == null ? '' : String(value);
+      control.dispatchEvent(new Event('input', { bubbles: true }));
+      control.dispatchEvent(new Event('change', { bubbles: true }));
     };
 
     setValue('cliente', params.get('cliente') || '');
@@ -240,6 +243,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
 
     document.body.dataset.solicitudFolio = folio;
     console.info('[Financiamiento] Precarga directa aplicada desde URL:', {
+      build: '20260823-fin-int-6',
       folio,
       total,
       enganche,
@@ -248,7 +252,6 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     });
   })();
   </script>
-  <script src="./solicitud-integracion.js?v=20260822-fin-int-5"></script>
-  <script src="./solicitud-precarga-fallback.js?v=20260822-fin-int-5"></script>
+  <script src="./solicitud-integracion.js?v=20260823-fin-int-6"></script>
 </body>
 </html>
