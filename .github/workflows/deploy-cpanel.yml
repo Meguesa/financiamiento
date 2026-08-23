@@ -9,7 +9,6 @@ on:
       - 'index.php'
       - 'app.js'
       - 'solicitud-integracion.js'
-      - 'solicitud-precarga-fallback.js'
       - 'styles.css'
       - 'portal-integration.css'
       - 'account-menu.css'
@@ -17,7 +16,6 @@ on:
       - 'sw.js'
       - 'assets/**'
       - 'icons/**'
-      - '.deploy-trigger'
       - '.github/workflows/deploy-cpanel.yml'
 
 permissions:
@@ -50,7 +48,6 @@ jobs:
           test -s index.php
           test -s app.js
           test -s solicitud-integracion.js
-          test -s solicitud-precarga-fallback.js
           test -s styles.css
           test -s portal-integration.css
           test -s account-menu.css
@@ -62,16 +59,14 @@ jobs:
           grep -q 'btnCompartir' app.js
           grep -q 'firmaCanvas' app.js
           grep -q 'Aplicar a Solicitud de Venta' solicitud-integracion.js
-          grep -q 'JDJP_FINANCIAMIENTO_PREFILL_LATEST' solicitud-precarga-fallback.js
           grep -q 'solicitud-integracion.js' index.php
-          grep -q 'solicitud-precarga-fallback.js' index.php
 
       - name: Preparar paquete de publicacion
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p deploy
-          cp index.php app.js solicitud-integracion.js solicitud-precarga-fallback.js styles.css portal-integration.css account-menu.css manifest.webmanifest sw.js deploy/
+          cp index.php app.js solicitud-integracion.js styles.css portal-integration.css account-menu.css manifest.webmanifest sw.js deploy/
           cp -R assets deploy/assets
           cp -R icons deploy/icons
 
