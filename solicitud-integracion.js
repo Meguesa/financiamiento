@@ -12,11 +12,15 @@
   const MSG_PREFILL = 'JDJP_FINANCIAMIENTO_PREFILL';
   const MSG_APPLY = 'JDJP_FINANCIAMIENTO_APPLY';
   const MSG_ACK = 'JDJP_FINANCIAMIENTO_ACK';
+  const BRIDGE_ID = String(params.get('bridge') || '').trim();
+  const STORAGE_PREFIX = 'JDJP_FINANCIAMIENTO_PREFILL_';
+  const CHANNEL_PREFIX = 'JDJP_FINANCIAMIENTO_CHANNEL_';
 
   let contexto = null;
   let aplicando = false;
   let readyTimer = null;
   let readyAttempts = 0;
+  let canal = null;
 
   function iniciar() {
     const resumen = document.querySelector('.summary')?.closest('.card');
@@ -29,11 +33,59 @@
     instalarPanel(resumen);
     window.addEventListener('message', recibirMensaje);
 
-    if (window.opener && !window.opener.closed) {
+    iniciarBridge();
+
+    if (!contexto && window.opener && !window.opener.closed) {
       iniciarHandshake();
-    } else {
+    } else if (!contexto && !BRIDGE_ID && (!window.opener || window.opener.closed)) {
       estado('Esta ventana de integración ya no está conectada con una Solicitud de Venta.', 'warn');
     }
+  }
+
+  function iniciarBridge() {
+    if (!BRIDGE_ID) return;
+
+    try {
+      if ('BroadcastChannel' in window) {
+        canal = new BroadcastChannel(`${CHANNEL_PREFIX}${BRIDGE_ID}`);
+        canal.addEventListener('message', (event) => procesarMensaje(event.data));
+      }
+    } catch (error) {
+      console.warn('[Financiamiento] No fue posible abrir BroadcastChannel:', error);
+      canal = null;
+    }
+
+    try {
+      const raw = localStorage.getItem(`${STORAGE_PREFIX}${BRIDGE_ID}`);
+      if (!raw) {
+        estado('Esperando los datos de la Solicitud de Venta...', 'warn');
+        enviarReadyBridge();
+        return;
+      }
+
+      const envelope = JSON.parse(raw);
+      const expiresAt = Number(envelope?.expiresAt || 0);
+      const data = envelope?.data || null;
+
+      if (!data || (expiresAt > 0 && Date.now() > expiresAt)) {
+        localStorage.removeItem(`${STORAGE_PREFIX}${BRIDGE_ID}`);
+        estado('Los datos temporales de la solicitud ya no están disponibles. Regresa a Solicitud de Venta y vuelve a pulsar Calcular financiamiento.', 'warn');
+        return;
+      }
+
+      contexto = data;
+      precargar(contexto);
+      enviarReadyBridge();
+    } catch (error) {
+      console.error('[Financiamiento] Error leyendo precarga temporal:', error);
+      estado('No fue posible leer los datos temporales de la Solicitud de Venta.', 'warn');
+    }
+  }
+
+  function enviarReadyBridge() {
+    try {
+      canal?.postMessage({ type: MSG_READY, bridge: BRIDGE_ID });
+    } catch (_) {}
   }
 
   function iniciarHandshake() {
@@ -47,20 +99,17 @@
       }
       if (!window.opener || window.opener.closed) {
         detenerHandshake();
-        estado('La ventana de Solicitud de Venta ya no está disponible.', 'warn');
         return;
       }
 
       readyAttempts += 1;
       try {
-        window.opener.postMessage({ type: MSG_READY, attempt: readyAttempts }, ORIGIN);
+        window.opener.postMessage({ type: MSG_READY, attempt: readyAttempts, bridge: BRIDGE_ID }, ORIGIN);
       } catch (_) {}
 
       if (readyAttempts >= 25) {
         detenerHandshake();
-        if (!contexto) {
-          estado('No fue posible recibir automáticamente los datos de la Solicitud de Venta. Regresa a la solicitud y pulsa nuevamente Calcular financiamiento.', 'warn');
-        }
+        if (!contexto) estado('No fue posible recibir automáticamente los datos de la Solicitud de Venta.', 'warn');
       }
     };
 
@@ -109,8 +158,13 @@
   }
 
   function recibirMensaje(event) {
-    if (event.origin !== ORIGIN || event.source !== window.opener) return;
-    const msg = event.data || {};
+    if (event.origin !== ORIGIN) return;
+    if (window.opener && event.source !== window.opener) return;
+    procesarMensaje(event.data || {});
+  }
+
+  function procesarMensaje(msg) {
+    if (!msg || typeof msg !== 'object') return;
 
     if (msg.type === MSG_PREFILL) {
       contexto = msg.data || {};
@@ -123,6 +177,9 @@
       aplicando = false;
       const boton = document.getElementById('btnAplicarSolicitud');
       if (boton) boton.disabled = !lastResult;
+      if (msg.ok && BRIDGE_ID) {
+        try { localStorage.removeItem(`${STORAGE_PREFIX}${BRIDGE_ID}`); } catch (_) {}
+      }
       estado(msg.message || (msg.ok ? 'Corrida aplicada correctamente.' : 'No fue posible aplicar la corrida.'), msg.ok ? 'ok' : 'warn');
     }
   }
@@ -138,7 +195,7 @@
     setValue('producto', data.producto || '');
     setValue('total', numero(data.total) > 0 ? numero(data.total).toFixed(2) : '');
     setValue('engancheMonto', numero(data.enganche) > 0 ? numero(data.enganche).toFixed(2) : '');
-    setValue('tasaAnual', numero(data.tasaAnualPct) >= 0 ? numero(data.tasaAnualPct).toFixed(2) : '');
+    setValue('tasaAnual', numero(data.tasaAnualPct) > 0 ? numero(data.tasaAnualPct).toFixed(2) : '');
     setValue('meses', numero(data.meses) > 0 ? String(Math.trunc(numero(data.meses))) : '');
     if (String(data.primerPago || '').match(/^\d{4}-\d{2}-\d{2}$/)) setValue('primerPago', data.primerPago);
 
@@ -160,8 +217,11 @@
       estado('Primero calcula una corrida financiera válida.', 'warn');
       return;
     }
-    if (!window.opener || window.opener.closed) {
-      estado('La ventana de Solicitud de Venta ya no está disponible.', 'warn');
+
+    const puedeCanal = Boolean(canal);
+    const puedeOpener = Boolean(window.opener && !window.opener.closed);
+    if (!puedeCanal && !puedeOpener) {
+      estado('La Solicitud de Venta ya no está disponible.', 'warn');
       return;
     }
 
@@ -175,28 +235,33 @@
       if (!pdf?.blob) throw new Error('No fue posible generar el PDF de la corrida.');
       const pdfBuffer = await pdf.blob.arrayBuffer();
 
-      const result = {
-        total: Number(lastResult.total || 0),
-        enganche: Number(lastResult.engancheIncl || 0),
-        enganchePct: Number(lastResult.enganchePctReal || 0) * 100,
-        montoFinanciar: Number(lastResult.financiarIncl || 0),
-        tasaAnualPct: Number(lastResult.tasaAnual || 0) * 100,
-        meses: Number(lastResult.meses || 0),
-        primerPago: formatDateISO(lastResult.primerPago),
-        mensualidad: Number(lastResult.mensualidad || 0),
-        totalPagos: Number(lastResult.totalPagos || 0),
-        diasPeriodo: Number(lastResult.diasPeriodo || 30),
-        ivaPct: Number(lastResult.ivaRate || IVA_RATE) * 100,
-        mode: String(lastResult.mode || 'nueva')
-      };
-
-      window.opener.postMessage({
+      const payload = {
         type: MSG_APPLY,
+        bridge: BRIDGE_ID,
         folio: String(contexto.folio || '').trim().toUpperCase(),
-        result,
+        result: {
+          total: Number(lastResult.total || 0),
+          enganche: Number(lastResult.engancheIncl || 0),
+          enganchePct: Number(lastResult.enganchePctReal || 0) * 100,
+          montoFinanciar: Number(lastResult.financiarIncl || 0),
+          tasaAnualPct: Number(lastResult.tasaAnual || 0) * 100,
+          meses: Number(lastResult.meses || 0),
+          primerPago: formatDateISO(lastResult.primerPago),
+          mensualidad: Number(lastResult.mensualidad || 0),
+          totalPagos: Number(lastResult.totalPagos || 0),
+          diasPeriodo: Number(lastResult.diasPeriodo || 30),
+          ivaPct: Number(lastResult.ivaRate || IVA_RATE) * 100,
+          mode: String(lastResult.mode || 'nueva')
+        },
         pdfFilename: `CORRIDA_FINANCIERA_${String(contexto.folio || '').trim().toUpperCase()}.pdf`,
         pdfBuffer
-      }, ORIGIN, [pdfBuffer]);
+      };
+
+      if (canal) {
+        canal.postMessage(payload);
+      } else {
+        window.opener.postMessage(payload, ORIGIN, [pdfBuffer]);
+      }
     } catch (error) {
       aplicando = false;
       if (boton) boton.disabled = !lastResult;
@@ -221,7 +286,6 @@
     return Number.isFinite(n) ? n : 0;
   }
 
-  // Activar el botón cada vez que render() termina con una corrida válida.
   const activarCuandoHayaResultado = window.setInterval(() => {
     const boton = document.getElementById('btnAplicarSolicitud');
     if (!boton) return;
@@ -231,6 +295,7 @@
   window.addEventListener('beforeunload', () => {
     window.clearInterval(activarCuandoHayaResultado);
     detenerHandshake();
+    try { canal?.close(); } catch (_) {}
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar, { once: true });
