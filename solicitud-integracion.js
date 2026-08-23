@@ -30,10 +30,7 @@
       cliente: String(params.get('cliente') || '').trim(),
       producto: String(params.get('producto') || '').trim(),
       total,
-      enganche: Math.max(0, numero(params.get('enganche'))),
-      tasaAnualPct: Math.max(0, numero(params.get('tasa'))),
-      meses: Math.max(0, Math.trunc(numero(params.get('meses')))),
-      primerPago: String(params.get('primerPago') || '').trim()
+      enganche: Math.max(0, numero(params.get('enganche')))
     };
   }
 
@@ -81,7 +78,7 @@
     panel.className = 'card fin-solicitud-panel';
     panel.innerHTML = `
       <h2>Integración con Solicitud de Venta</h2>
-      <p>Calcula la corrida normalmente y, cuando esté lista, aplícala al folio <span id="finSolicitudFolio" class="fin-solicitud-folio">pendiente</span>.</p>
+      <p>Captura aquí las condiciones de financiamiento y calcula la corrida. Al aplicarla, estos datos serán la fuente oficial para el folio <span id="finSolicitudFolio" class="fin-solicitud-folio">pendiente</span>.</p>
       <div class="actions">
         <button id="btnAplicarSolicitud" class="btn primary" type="button" disabled>Aplicar a Solicitud de Venta</button>
       </div>
@@ -98,18 +95,12 @@
     setValue('total', Number(data.total).toFixed(2));
     setValue('engancheMonto', Number(data.enganche || 0).toFixed(2));
     setValue('enganchePct', data.total > 0 ? ((Number(data.enganche || 0) / Number(data.total)) * 100).toFixed(2) : '0.00');
-    setValue('tasaAnual', data.tasaAnualPct > 0 ? Number(data.tasaAnualPct).toFixed(2) : '');
-    setValue('meses', data.meses > 0 ? String(data.meses) : '');
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(data.primerPago || '')) {
-      setValue('primerPago', data.primerPago);
-    }
 
     const folioControl = document.getElementById('finSolicitudFolio');
     if (folioControl) folioControl.textContent = data.folio;
 
-    estado(`Datos precargados para ${data.folio}. Revisa las condiciones y pulsa Calcular.`, 'ok');
-    console.info('[Financiamiento] Datos recibidos directamente desde Solicitud de Venta:', data);
+    estado(`Datos comerciales precargados para ${data.folio}. Captura aquí tasa, plazo y fecha; después pulsa Calcular.`, 'ok');
+    console.info('[Financiamiento] Datos comerciales recibidos desde Solicitud de Venta:', data);
   }
 
   function setValue(id, value) {
@@ -161,6 +152,7 @@
       if (!pdf?.blob) throw new Error('No fue posible generar el PDF de la corrida.');
 
       const pdfBuffer = await pdf.blob.arrayBuffer();
+      const primerPagoIso = formatDateISO(lastResult.primerPago);
       const payload = {
         type: MSG_APPLY,
         folio: contexto.folio,
@@ -168,11 +160,16 @@
           total: Number(lastResult.total || 0),
           enganche: Number(lastResult.engancheIncl || 0),
           enganchePct: Number(lastResult.enganchePctReal || 0) * 100,
+          precioLista: Number(lastResult.total || 0),
+          bonificacion: 0,
           montoFinanciar: Number(lastResult.financiarIncl || 0),
           tasaAnualPct: Number(lastResult.tasaAnual || 0) * 100,
           meses: Number(lastResult.meses || 0),
-          primerPago: formatDateISO(lastResult.primerPago),
+          primerPago: primerPagoIso,
+          diaPago: Number(primerPagoIso.slice(8, 10) || 0),
           mensualidad: Number(lastResult.mensualidad || 0),
+          periodoPagos: 'MENSUAL',
+          pagosAnuales: 12,
           totalPagos: Number(lastResult.totalPagos || 0),
           diasPeriodo: Number(lastResult.diasPeriodo || 30),
           ivaPct: Number(lastResult.ivaRate || IVA_RATE) * 100,
