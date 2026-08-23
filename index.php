@@ -195,10 +195,21 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     </details>
   </footer>
 
-  <script src="./app.js?v=20260823-fin-int-6"></script>
+  <script src="./app.js?v=20260823-fin-source-1"></script>
   <script>
   (() => {
     'use strict';
+
+    // app.js genera el PDF de la corrida y originalmente buscaba el logo en
+    // /assets/logo.jpg. Financiamiento vive bajo /financiamiento/, por lo que
+    // normalizamos esa unica ruta sin tocar el calculo financiero.
+    if (typeof window.loadImageAsDataURL === 'function') {
+      const cargarImagenOriginal = window.loadImageAsDataURL;
+      window.loadImageAsDataURL = function (url) {
+        const resuelta = url === '/assets/logo.jpg' ? '/financiamiento/assets/logo.jpg' : url;
+        return cargarImagenOriginal(resuelta);
+      };
+    }
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('integracion') !== 'solicitud') return;
@@ -208,11 +219,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     const enganche = Math.max(0, Number(params.get('enganche') || 0));
 
     if (!/^SV-\d{4}-\d+$/.test(folio) || !(total > 0)) {
-      console.warn('[Financiamiento] Parametros de Solicitud incompletos en URL.', {
-        folio,
-        total,
-        enganche
-      });
+      console.warn('[Financiamiento] Parametros de Solicitud incompletos en URL.', { folio, total, enganche });
       return;
     }
 
@@ -224,26 +231,17 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
       control.dispatchEvent(new Event('change', { bubbles: true }));
     };
 
+    // Solo se precargan datos comerciales. Las condiciones financieras se
+    // capturan aqui y regresan a Solicitud al aplicar la corrida.
     setValue('cliente', params.get('cliente') || '');
     setValue('producto', params.get('producto') || '');
     setValue('total', total.toFixed(2));
     setValue('engancheMonto', enganche.toFixed(2));
     setValue('enganchePct', ((enganche / total) * 100).toFixed(2));
 
-    const tasa = Number(params.get('tasa') || 0);
-    if (tasa > 0) setValue('tasaAnual', tasa.toFixed(2));
-
-    const meses = Math.trunc(Number(params.get('meses') || 0));
-    if (meses > 0) setValue('meses', String(meses));
-
-    const primerPago = String(params.get('primerPago') || '');
-    if (/^\d{4}-\d{2}-\d{2}$/.test(primerPago)) {
-      setValue('primerPago', primerPago);
-    }
-
     document.body.dataset.solicitudFolio = folio;
-    console.info('[Financiamiento] Precarga directa aplicada desde URL:', {
-      build: '20260823-fin-int-6',
+    console.info('[Financiamiento] Precarga comercial aplicada desde URL:', {
+      build: '20260823-fin-source-1',
       folio,
       total,
       enganche,
@@ -252,6 +250,6 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     });
   })();
   </script>
-  <script src="./solicitud-integracion.js?v=20260823-fin-int-6"></script>
+  <script src="./solicitud-integracion.js?v=20260823-fin-source-1"></script>
 </body>
 </html>
