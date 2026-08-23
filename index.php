@@ -195,8 +195,60 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     </details>
   </footer>
 
-  <script src="./app.js?v=20260822-fin-int-4"></script>
-  <script src="./solicitud-integracion.js?v=20260822-fin-int-4"></script>
-  <script src="./solicitud-precarga-fallback.js?v=20260822-fin-int-4"></script>
+  <script src="./app.js?v=20260822-fin-int-5"></script>
+  <script>
+  (() => {
+    'use strict';
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('integracion') !== 'solicitud') return;
+
+    const folio = String(params.get('folio') || '').trim().toUpperCase();
+    const total = Number(params.get('total') || 0);
+    const enganche = Math.max(0, Number(params.get('enganche') || 0));
+
+    if (!/^SV-\d{4}-\d+$/.test(folio) || !(total > 0)) {
+      console.warn('[Financiamiento] Parametros de Solicitud incompletos en URL.', {
+        folio,
+        total,
+        enganche
+      });
+      return;
+    }
+
+    const setValue = (id, value) => {
+      const control = document.getElementById(id);
+      if (control) control.value = value == null ? '' : String(value);
+    };
+
+    setValue('cliente', params.get('cliente') || '');
+    setValue('producto', params.get('producto') || '');
+    setValue('total', total.toFixed(2));
+    setValue('engancheMonto', enganche.toFixed(2));
+    setValue('enganchePct', ((enganche / total) * 100).toFixed(2));
+
+    const tasa = Number(params.get('tasa') || 0);
+    if (tasa > 0) setValue('tasaAnual', tasa.toFixed(2));
+
+    const meses = Math.trunc(Number(params.get('meses') || 0));
+    if (meses > 0) setValue('meses', String(meses));
+
+    const primerPago = String(params.get('primerPago') || '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(primerPago)) {
+      setValue('primerPago', primerPago);
+    }
+
+    document.body.dataset.solicitudFolio = folio;
+    console.info('[Financiamiento] Precarga directa aplicada desde URL:', {
+      folio,
+      total,
+      enganche,
+      cliente: params.get('cliente') || '',
+      producto: params.get('producto') || ''
+    });
+  })();
+  </script>
+  <script src="./solicitud-integracion.js?v=20260822-fin-int-5"></script>
+  <script src="./solicitud-precarga-fallback.js?v=20260822-fin-int-5"></script>
 </body>
 </html>
