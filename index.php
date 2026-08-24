@@ -16,9 +16,9 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ventas con Financiamiento | Portal JdJP</title>
   <link rel="stylesheet" href="./styles.css" />
-  <link rel="stylesheet" href="./portal-integration.css" />
-  <link rel="stylesheet" href="./account-menu.css" />
-  <meta name="theme-color" content="#111111" />
+  <link rel="stylesheet" href="./portal-integration.css?v=20260823-2" />
+  <link rel="stylesheet" href="./account-menu.css?v=20260823-2" />
+  <meta name="theme-color" content="#ffffff" />
 
   <!-- PDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -28,17 +28,19 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
 <nav class="portal-toolbar" aria-label="Navegación del portal">
   <div class="portal-toolbar-inner">
     <div class="portal-toolbar-title-wrap">
-      <img class="portal-toolbar-logo" src="./assets/logo.jpg" alt="Jardines de Juan Pablo">
       <div class="portal-toolbar-title">
+        <span>Jardines de Juan Pablo</span>
         <strong>Ventas con Financiamiento</strong>
-        <span>Portal Interno JdJP · Jardines de Juan Pablo</span>
       </div>
     </div>
     <div class="portal-toolbar-actions">
       <a class="portal-toolbar-link" href="/">Regresar al portal</a>
       <details class="account-menu">
         <summary class="account-trigger" aria-label="Abrir menú de usuario" title="<?= $name ?>">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="4" fill="currentColor" />
+            <path d="M4 20c0-4.1 3.6-6 8-6s8 1.9 8 6v1H4z" fill="currentColor" />
+          </svg>
         </summary>
         <div class="account-menu-panel">
           <div class="account-menu-info"><strong><?= $name ?></strong><span><?= $email ?></span></div>
