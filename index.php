@@ -15,7 +15,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ventas con Financiamiento | Portal JdJP</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=20260823-header-map-1" />
   <link rel="stylesheet" href="./portal-integration.css?v=20260823-2" />
   <link rel="stylesheet" href="./account-menu.css?v=20260823-2" />
   <meta name="theme-color" content="#ffffff" />
@@ -28,11 +28,15 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
 <nav class="portal-toolbar" aria-label="Navegación del portal">
   <div class="portal-toolbar-inner">
     <div class="portal-toolbar-title-wrap">
+      <img class="portal-toolbar-logo" src="./assets/logo.jpg" alt="Jardines de Juan Pablo">
       <div class="portal-toolbar-title">
-        <span>Jardines de Juan Pablo</span>
         <strong>Ventas con Financiamiento</strong>
+        <span>Portal Interno JdJP · Jardines de Juan Pablo</span>
       </div>
     </div>
+
+    <div class="portal-toolbar-context">Simulación, financiamiento y generación de documentos</div>
+
     <div class="portal-toolbar-actions">
       <a class="portal-toolbar-link" href="/">Regresar al portal</a>
       <details class="account-menu">
