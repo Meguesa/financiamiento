@@ -30,28 +30,17 @@ body.financing-page{
   z-index:30;
   color:var(--jp-brown);
   background:#fff;
-  border-top:38px solid var(--jp-blue);
-  border-bottom:3px solid var(--jp-gold);
-  box-shadow:0 7px 22px rgba(58,17,9,.08);
+  border-bottom:2px solid var(--jp-gold);
+  box-shadow:0 6px 20px rgba(58,17,9,.06);
 }
 
 .portal-toolbar::before{
-  content:"Portal empresarial seguro para colaboradores";
-  position:absolute;
-  top:-38px;
-  left:max(18px,calc((100% - 1180px)/2));
-  height:38px;
-  display:flex;
-  align-items:center;
-  color:#fff;
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:.02em;
+  content:none;
 }
 
 .portal-toolbar-inner{
   width:min(1180px,calc(100% - 36px));
-  min-height:92px;
+  min-height:86px;
   margin:0 auto;
   display:flex;
   align-items:center;
@@ -67,36 +56,34 @@ body.financing-page{
 }
 
 .portal-toolbar-logo{
-  width:auto;
-  height:64px;
-  flex:0 0 auto;
-  display:block;
-  object-fit:contain;
+  display:none;
 }
 
 .portal-toolbar-title{
   display:flex;
   flex-direction:column;
-  gap:3px;
+  gap:2px;
   min-width:0;
 }
 
 .portal-toolbar-title strong{
   color:var(--jp-brown);
-  font-size:20px;
+  font-size:24px;
+  line-height:1.15;
 }
 
 .portal-toolbar-title span{
-  color:var(--jp-blue);
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:.04em;
+  order:-1;
+  color:#7a675d;
+  font-size:13px;
+  font-weight:500;
+  letter-spacing:0;
 }
 
 .portal-toolbar-actions{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:12px;
   flex-wrap:wrap;
 }
 
@@ -104,14 +91,14 @@ body.financing-page{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  min-height:40px;
-  padding:0 15px;
-  border:1px solid #d9ccc5;
-  border-radius:8px;
-  color:var(--jp-brown);
+  min-height:44px;
+  padding:0 17px;
+  border:1px solid #c9d9e7;
+  border-radius:10px;
+  color:#0b4e7d;
   text-decoration:none;
-  font-size:13px;
-  font-weight:800;
+  font-size:14px;
+  font-weight:700;
   background:#fff;
   transition:background .18s ease,border-color .18s ease,color .18s ease;
 }
@@ -217,15 +204,6 @@ tbody tr:hover{ background:#faf7f1; }
 .footer .legal p{ color:rgba(255,255,255,.82); }
 
 @media(max-width:720px){
-  .portal-toolbar{ border-top-width:42px; }
-
-  .portal-toolbar::before{
-    top:-42px;
-    height:42px;
-    left:14px;
-    right:14px;
-  }
-
   .portal-toolbar-inner{
     min-height:0;
     align-items:flex-start;
@@ -237,10 +215,6 @@ tbody tr:hover{ background:#faf7f1; }
     width:100%;
   }
 
-  .portal-toolbar-logo{
-    height:56px;
-  }
-
   .portal-toolbar-actions{
     width:100%;
     justify-content:space-between;
@@ -249,11 +223,11 @@ tbody tr:hover{ background:#faf7f1; }
 
 @media(max-width:520px){
   .portal-toolbar-title strong{
-    font-size:18px;
+    font-size:21px;
   }
 
   .portal-toolbar-title span{
-    line-height:1.4;
+    line-height:1.35;
   }
 
   .portal-toolbar-actions{
