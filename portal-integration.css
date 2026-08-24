@@ -1,18 +1,12 @@
-/* Integracion visual local de Ventas con Financiamiento al Portal JdJP */
+/* Integracion visual local de Ventas con Financiamiento al Portal JdJP.
+   La barra superior se controla exclusivamente desde styles.css para mantener
+   el mismo patron visual que Mapa del Panteon. */
 :root{
-  --bg:#f7f5f0;
-  --card:#ffffff;
-  --muted:#6d655f;
-  --text:#241d19;
-  --line:#e8e1d8;
-  --accent:#3a1109;
-  --accent2:#5b281d;
   --jp-blue:#225b8a;
   --jp-blue-dark:#19496f;
   --jp-gold:#fdbb2d;
   --jp-brown:#3a1109;
   --jp-cream:#f7f5f0;
-  --radius:12px;
 }
 
 html,body{
@@ -21,94 +15,6 @@ html,body{
 
 body.financing-page{
   background:var(--jp-cream);
-  color:var(--text);
-}
-
-.portal-toolbar{
-  position:sticky;
-  top:0;
-  z-index:30;
-  color:var(--jp-brown);
-  background:#fff;
-  border-bottom:2px solid var(--jp-gold);
-  box-shadow:0 6px 20px rgba(58,17,9,.06);
-}
-
-.portal-toolbar::before{
-  content:none;
-}
-
-.portal-toolbar-inner{
-  width:min(1180px,calc(100% - 36px));
-  min-height:86px;
-  margin:0 auto;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:18px;
-}
-
-.portal-toolbar-title-wrap{
-  display:flex;
-  align-items:center;
-  gap:16px;
-  min-width:0;
-}
-
-.portal-toolbar-logo{
-  display:none;
-}
-
-.portal-toolbar-title{
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-  min-width:0;
-}
-
-.portal-toolbar-title strong{
-  color:var(--jp-brown);
-  font-size:24px;
-  line-height:1.15;
-}
-
-.portal-toolbar-title span{
-  order:-1;
-  color:#7a675d;
-  font-size:13px;
-  font-weight:500;
-  letter-spacing:0;
-}
-
-.portal-toolbar-actions{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  flex-wrap:wrap;
-}
-
-.portal-toolbar-link{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-height:44px;
-  padding:0 17px;
-  border:1px solid #c9d9e7;
-  border-radius:10px;
-  color:#0b4e7d;
-  text-decoration:none;
-  font-size:14px;
-  font-weight:700;
-  background:#fff;
-  transition:background .18s ease,border-color .18s ease,color .18s ease;
-}
-
-.portal-toolbar-link:hover,
-.portal-toolbar-link:focus-visible{
-  color:var(--jp-brown);
-  background:var(--jp-gold);
-  border-color:var(--jp-gold);
-  outline:none;
 }
 
 .app-header{
@@ -121,13 +27,6 @@ body.financing-page{
   padding-bottom:34px;
 }
 
-.card{
-  border:1px solid var(--line);
-  border-top:4px solid var(--jp-gold);
-  border-radius:5px 5px 14px 14px;
-  box-shadow:0 13px 34px rgba(58,17,9,.08);
-}
-
 .card h2,
 .accordion-header .acc-title{
   color:var(--jp-brown);
@@ -137,7 +36,7 @@ body.financing-page{
 .field small,
 .muted,
 .hint{
-  color:var(--muted);
+  color:#6d655f;
 }
 
 input,select{
@@ -173,16 +72,16 @@ input[readonly]{
 }
 
 .summary-item{
-  border-color:var(--line);
+  border-color:#e8e1d8;
   border-radius:10px;
   background:#fff;
 }
 
-.summary-item .k{ color:var(--muted); }
+.summary-item .k{ color:#6d655f; }
 .summary-item .v{ color:var(--jp-brown); }
 
 .table-wrap{
-  border-color:var(--line);
+  border-color:#e8e1d8;
   border-radius:10px;
 }
 
@@ -192,7 +91,7 @@ thead th{
 }
 
 tbody tr:hover{ background:#faf7f1; }
-.sig-box{ border-color:var(--line); }
+.sig-box{ border-color:#e8e1d8; }
 
 .footer{
   color:rgba(255,255,255,.82);
@@ -202,39 +101,3 @@ tbody tr:hover{ background:#faf7f1; }
 
 .footer .legal summary,
 .footer .legal p{ color:rgba(255,255,255,.82); }
-
-@media(max-width:720px){
-  .portal-toolbar-inner{
-    min-height:0;
-    align-items:flex-start;
-    flex-direction:column;
-    padding:14px 0;
-  }
-
-  .portal-toolbar-title-wrap{
-    width:100%;
-  }
-
-  .portal-toolbar-actions{
-    width:100%;
-    justify-content:space-between;
-  }
-}
-
-@media(max-width:520px){
-  .portal-toolbar-title strong{
-    font-size:21px;
-  }
-
-  .portal-toolbar-title span{
-    line-height:1.35;
-  }
-
-  .portal-toolbar-actions{
-    align-items:center;
-  }
-
-  .portal-toolbar-link{
-    flex:1 1 auto;
-  }
-}
