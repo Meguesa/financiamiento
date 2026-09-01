@@ -1,6 +1,15 @@
 (() => {
   'use strict';
 
+  if (!window.__jdjpAnualidadesScriptSolicitado && !window.__jdjpAnualidadesFinanciamiento) {
+    window.__jdjpAnualidadesScriptSolicitado = true;
+    const script = document.createElement('script');
+    script.src = './anualidades.js?v=20260901-anualidades-1';
+    script.async = false;
+    script.onerror = () => console.error('[Financiamiento] No fue posible cargar el modulo de anualidades.');
+    document.head.appendChild(script);
+  }
+
   if (window.__financiamientoSolicitudIntegracionActiva) return;
   window.__financiamientoSolicitudIntegracionActiva = true;
 
@@ -99,7 +108,7 @@
     const folioControl = document.getElementById('finSolicitudFolio');
     if (folioControl) folioControl.textContent = data.folio;
 
-    estado(`Datos comerciales precargados para ${data.folio}. Captura aquí tasa, plazo y fecha; después pulsa Calcular.`, 'ok');
+    estado(`Datos comerciales precargados para ${data.folio}. Captura aquí tasa, plazo, fecha y anualidades; después pulsa Calcular.`, 'ok');
     console.info('[Financiamiento] Datos comerciales recibidos desde Solicitud de Venta:', data);
   }
 
@@ -169,7 +178,8 @@
           diaPago: Number(primerPagoIso.slice(8, 10) || 0),
           mensualidad: Number(lastResult.mensualidad || 0),
           periodoPagos: 'MENSUAL',
-          pagosAnuales: 12,
+          pagosAnuales: Number(lastResult.pagosAnualesEfectivos ?? lastResult.pagosAnuales ?? 0),
+          importeAnualidad: Number(lastResult.importeAnualidad || 0),
           totalPagos: Number(lastResult.totalPagos || 0),
           diasPeriodo: Number(lastResult.diasPeriodo || 30),
           ivaPct: Number(lastResult.ivaRate || IVA_RATE) * 100,
