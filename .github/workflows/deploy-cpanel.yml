@@ -63,7 +63,7 @@ jobs:
           grep -q 'Pagos anuales' anualidades.js
           grep -q 'importeAnualidad' anualidades.js
           grep -q 'Aplicar a Solicitud de Venta' solicitud-integracion.js
-          grep -q 'anualidades.js' index.php
+          grep -q 'anualidades.js' solicitud-integracion.js
           grep -q 'solicitud-integracion.js' index.php
 
       - name: Preparar paquete de publicacion
