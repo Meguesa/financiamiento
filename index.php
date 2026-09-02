@@ -201,7 +201,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     </details>
   </footer>
 
-  <script src="./app.js?v=20260823-fin-source-1"></script>
+  <script src="./app.js?v=20260902-fin-2"></script>
   <script>
   (() => {
     'use strict';
@@ -247,7 +247,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
 
     document.body.dataset.solicitudFolio = folio;
     console.info('[Financiamiento] Precarga comercial aplicada desde URL:', {
-      build: '20260823-fin-source-1',
+      build: '20260902-fin-2',
       folio,
       total,
       enganche,
@@ -256,6 +256,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     });
   })();
   </script>
-  <script src="./solicitud-integracion.js?v=20260823-fin-source-1"></script>
+  <script src="./solicitud-integracion.js?v=20260902-fin-2"></script>
+  <script src="./pdf-anualidades.js?v=20260902-pdf-anualidades-1"></script>
 </body>
 </html>
