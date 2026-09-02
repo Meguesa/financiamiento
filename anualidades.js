@@ -7,17 +7,48 @@
   const originalRender = render;
   const originalLimpiar = limpiar;
   const originalBuildShareText = buildShareText;
+  const originalGenerarPDF = generarPDF;
+
+  let fechaAnualidadEditadaManualmente = false;
 
   function control(id) {
     return document.getElementById(id);
   }
 
+  function fechaValida(value) {
+    return value instanceof Date && Number.isFinite(value.getTime());
+  }
+
+  function sumarAniosSeguro(value, years) {
+    const origen = toDateSafe(value);
+    const year = origen.getFullYear() + years;
+    const month = origen.getMonth();
+    const day = origen.getDate();
+    const ultimoDia = new Date(year, month + 1, 0, 12, 0, 0, 0).getDate();
+    return new Date(year, month, Math.min(day, ultimoDia), 12, 0, 0, 0);
+  }
+
+  function fechaPrimerAnualidadPredeterminada() {
+    if (!ui.primerPago?.value) return null;
+    return sumarAniosSeguro(parseDateLocal(ui.primerPago.value), 1);
+  }
+
+  function sincronizarFechaPrimerAnualidad(forzar = false) {
+    const campo = control('fechaPrimerAnualidad');
+    const predeterminada = fechaPrimerAnualidadPredeterminada();
+    if (!campo || !predeterminada) return;
+
+    if (forzar || !fechaAnualidadEditadaManualmente || !campo.value) {
+      campo.value = formatDateISO(predeterminada);
+    }
+  }
+
   function instalarInterfaz() {
     if (control('pagosAnuales')) return;
 
-    const mesesLabel = ui.meses?.closest('label');
-    const grid = mesesLabel?.parentElement;
-    if (!mesesLabel || !grid) return;
+    const diasLabel = ui.diasPeriodo?.closest('label');
+    const grid = diasLabel?.parentElement;
+    if (!diasLabel || !grid) return;
 
     const style = document.createElement('style');
     style.id = 'anualidadesFinanciamientoStyle';
@@ -32,13 +63,13 @@
 
     const heading = document.createElement('div');
     heading.className = 'anualidad-heading';
-    heading.innerHTML = '<strong>Anualidad</strong><small>Pagos adicionales programados. La primera anualidad se aplica en el pago 12 y las siguientes en los pagos 24, 36, 48, etc.</small>';
+    heading.innerHTML = '<strong>Anualidad</strong><small>Pagos adicionales programados una vez por año. La primera fecha se propone automáticamente a un año del primer pago y puede modificarse.</small>';
 
     const pagos = document.createElement('label');
     pagos.className = 'field';
     pagos.innerHTML = `
       <span>Pagos anuales</span>
-      <input id="pagosAnuales" type="number" inputmode="numeric" placeholder="Ej. 3" min="0" step="1" />
+      <input id="pagosAnuales" type="number" inputmode="numeric" placeholder="Ej. 2" min="0" step="1" />
       <small>Número de anualidades durante el plazo. Usa 0 si no aplica.</small>
     `;
 
@@ -50,9 +81,26 @@
       <small>Importe de cada anualidad, con IVA.</small>
     `;
 
-    mesesLabel.insertAdjacentElement('afterend', importe);
-    mesesLabel.insertAdjacentElement('afterend', pagos);
-    mesesLabel.insertAdjacentElement('afterend', heading);
+    const fecha = document.createElement('label');
+    fecha.className = 'field';
+    fecha.innerHTML = `
+      <span>Fecha primer pago anual</span>
+      <input id="fechaPrimerAnualidad" type="date" />
+      <small>Por defecto: un año después del primer pago. Si no coincide con una mensualidad, se aplica en el primer pago mensual con fecha igual o posterior.</small>
+    `;
+
+    diasLabel.after(heading, pagos, importe, fecha);
+
+    sincronizarFechaPrimerAnualidad(true);
+
+    ui.primerPago?.addEventListener('change', () => {
+      sincronizarFechaPrimerAnualidad(false);
+    });
+
+    control('fechaPrimerAnualidad')?.addEventListener('change', () => {
+      fechaAnualidadEditadaManualmente = true;
+      if (lastResult) calcular();
+    });
 
     const summary = document.querySelector('.summary');
     if (summary && !control('resAnualidad')) {
@@ -73,19 +121,54 @@
   }
 
   function leerAnualidades() {
+    const fechaRaw = String(control('fechaPrimerAnualidad')?.value || '').trim();
+    const fechaPrimerAnualidad = /^\d{4}-\d{2}-\d{2}$/.test(fechaRaw)
+      ? parseDateLocal(fechaRaw)
+      : null;
+
     return {
       pagosAnuales: Math.max(0, Math.trunc(Number(control('pagosAnuales')?.value || 0))),
-      importeAnualidad: Math.max(0, Number(control('importeAnualidad')?.value || 0))
+      importeAnualidad: Math.max(0, Number(control('importeAnualidad')?.value || 0)),
+      fechaPrimerAnualidad
     };
   }
 
-  function indicesAnualidad(meses, pagosAnuales) {
-    const indices = [];
-    for (let i = 1; i <= pagosAnuales; i += 1) {
-      const pago = i * 12;
-      if (pago <= meses) indices.push(pago);
+  function indicePagoEnODespues(primerPago, meses, fechaObjetivo) {
+    if (!fechaValida(fechaObjetivo)) return null;
+    const objetivo = fechaObjetivo.getTime();
+
+    for (let k = 1; k <= meses; k += 1) {
+      if (addMonths(primerPago, k - 1).getTime() >= objetivo) return k;
     }
-    return indices;
+    return null;
+  }
+
+  function maxAnualidadesDisponibles(meses, primerPago, fechaPrimerAnualidad) {
+    if (!(meses > 0) || !fechaValida(fechaPrimerAnualidad)) return 0;
+
+    const ultimaFecha = addMonths(primerPago, meses - 1).getTime();
+    let cantidad = 0;
+
+    for (let i = 0; i < 100; i += 1) {
+      const fecha = sumarAniosSeguro(fechaPrimerAnualidad, i);
+      if (fecha.getTime() > ultimaFecha) break;
+      cantidad += 1;
+    }
+
+    return cantidad;
+  }
+
+  function programarAnualidades(meses, primerPago, pagosAnuales, fechaPrimerAnualidad) {
+    const programacion = [];
+
+    for (let i = 0; i < pagosAnuales; i += 1) {
+      const fechaProgramada = sumarAniosSeguro(fechaPrimerAnualidad, i);
+      const indicePago = indicePagoEnODespues(primerPago, meses, fechaProgramada);
+      if (indicePago == null) break;
+      programacion.push({ numero: i + 1, fechaProgramada, indicePago });
+    }
+
+    return programacion;
   }
 
   function pagoMensualConAnualidades(pvSub, rate, meses, importeAnualidadSub, indices) {
@@ -104,8 +187,8 @@
     return (pvSub - valorPresenteAnualidades) / factorMensualidades;
   }
 
-  function construirCorrida({ pvSub, rate, meses, primerPago, ivaRate, pagoSub, importeAnualidad, pagosAnuales }) {
-    const indices = new Set(indicesAnualidad(meses, pagosAnuales));
+  function construirCorrida({ pvSub, rate, meses, primerPago, ivaRate, pagoSub, importeAnualidad, programacion }) {
+    const porIndice = new Map(programacion.map((item) => [item.indicePago, item]));
     const anualidadSubPlaneada = round2(importeAnualidad / (1 + ivaRate));
     let saldo = pvSub;
     const rows = [];
@@ -116,7 +199,8 @@
       const saldoInicial = saldo;
       const interes = round2(saldo * rate);
       let capitalMensual = round2(pagoSub - interes);
-      let anualidadCapital = indices.has(k) ? anualidadSubPlaneada : 0;
+      const eventoAnualidad = porIndice.get(k) || null;
+      let anualidadCapital = eventoAnualidad ? anualidadSubPlaneada : 0;
 
       let capitalTotal = round2(capitalMensual + anualidadCapital);
       if (capitalTotal > saldo) {
@@ -148,6 +232,7 @@
         capitalMensual,
         anualidadCapital,
         anualidadTotal,
+        fechaAnualidadProgramada: eventoAnualidad?.fechaProgramada || null,
         interes,
         iva: ivaPago,
         pago: pagoTotal,
@@ -167,20 +252,35 @@
 
   calcular = function calcularConAnualidades() {
     instalarInterfaz();
+    sincronizarFechaPrimerAnualidad(false);
 
     const inp = getInputs();
     const anual = leerAnualidades();
     const errs = validar(inp);
-    const maxAnualidades = Math.floor(inp.meses / 12);
 
-    if (anual.pagosAnuales > maxAnualidades) {
-      errs.push(`Para un plazo de ${inp.meses} meses solo pueden programarse hasta ${maxAnualidades} pago(s) anual(es).`);
-    }
     if (anual.pagosAnuales > 0 && !(anual.importeAnualidad > 0)) {
       errs.push('Captura el importe de cada anualidad.');
     }
     if (anual.pagosAnuales === 0 && anual.importeAnualidad > 0) {
       errs.push('Captura cuántos pagos anuales se realizarán.');
+    }
+    if (anual.pagosAnuales > 0 && !fechaValida(anual.fechaPrimerAnualidad)) {
+      errs.push('Captura la fecha del primer pago anual.');
+    }
+    if (
+      anual.pagosAnuales > 0 &&
+      fechaValida(anual.fechaPrimerAnualidad) &&
+      anual.fechaPrimerAnualidad.getTime() <= inp.primerPago.getTime()
+    ) {
+      errs.push('La fecha del primer pago anual debe ser posterior a la fecha del primer pago mensual.');
+    }
+
+    const maxAnualidades = fechaValida(anual.fechaPrimerAnualidad)
+      ? maxAnualidadesDisponibles(inp.meses, inp.primerPago, anual.fechaPrimerAnualidad)
+      : 0;
+
+    if (anual.pagosAnuales > maxAnualidades) {
+      errs.push(`Con la fecha seleccionada y un plazo de ${inp.meses} meses solo caben ${maxAnualidades} pago(s) anual(es).`);
     }
 
     if (errs.length) {
@@ -201,7 +301,10 @@
     const financiarSub = round2(financiarIncl / (1 + inp.ivaRate));
     const rate = (inp.tasaAnual / 360) * inp.diasPeriodo;
 
-    const indices = indicesAnualidad(inp.meses, anual.pagosAnuales);
+    const programacion = anual.pagosAnuales > 0
+      ? programarAnualidades(inp.meses, inp.primerPago, anual.pagosAnuales, anual.fechaPrimerAnualidad)
+      : [];
+    const indices = programacion.map((item) => item.indicePago);
     const anualidadSub = round2(anual.importeAnualidad / (1 + inp.ivaRate));
     let pagoSub = pagoMensualConAnualidades(financiarSub, rate, inp.meses, anualidadSub, indices);
 
@@ -220,7 +323,7 @@
       ivaRate: inp.ivaRate,
       pagoSub,
       importeAnualidad: anual.importeAnualidad,
-      pagosAnuales: anual.pagosAnuales
+      programacion
     });
 
     const mensualidad = round2(pagoSub * (1 + inp.ivaRate));
@@ -229,6 +332,7 @@
       mode: 'nueva',
       ...inp,
       ...anual,
+      programacionAnualidades: programacion,
       pagosAnualesEfectivos: corrida.pagosAnualesEfectivos,
       mesesOriginal: inp.meses,
       engancheIncl,
@@ -268,7 +372,10 @@
 
     const extraCapitalSubPlaneado = round2(extraTotal / (1 + baseResult.ivaRate));
     const anualidadCapitalPlaneada = round2((baseResult.importeAnualidad || 0) / (1 + baseResult.ivaRate));
-    const indices = new Set(indicesAnualidad(mesesBase, baseResult.pagosAnuales || 0));
+    const programacion = Array.isArray(baseResult.programacionAnualidades)
+      ? baseResult.programacionAnualidades
+      : [];
+    const porIndice = new Map(programacion.map((item) => [item.indicePago, item]));
 
     let saldo = baseResult.financiarSub;
     const rows = [];
@@ -279,7 +386,8 @@
       const saldoInicial = saldo;
       const interes = round2(saldo * baseResult.rate);
       let capitalMensual = round2(baseResult.pagoSub - interes);
-      let anualidadCapital = indices.has(n) ? anualidadCapitalPlaneada : 0;
+      const eventoAnualidad = porIndice.get(n) || null;
+      let anualidadCapital = eventoAnualidad ? anualidadCapitalPlaneada : 0;
       let abonoCapital = n === pagoN ? extraCapitalSubPlaneado : 0;
 
       let disponible = round2(saldo - capitalMensual);
@@ -315,6 +423,7 @@
         capitalMensual,
         anualidadCapital,
         anualidadTotal,
+        fechaAnualidadProgramada: eventoAnualidad?.fechaProgramada || null,
         interes,
         iva: ivaPago,
         pago: pagoTotal,
@@ -354,8 +463,11 @@
     if (anualidadResumen) {
       const cantidad = Number(res.pagosAnualesEfectivos ?? res.pagosAnuales ?? 0);
       const importe = Number(res.importeAnualidad || 0);
+      const primeraFecha = fechaValida(res.fechaPrimerAnualidad)
+        ? formatDateHuman(res.fechaPrimerAnualidad)
+        : '—';
       anualidadResumen.textContent = cantidad > 0
-        ? `${cantidad} × ${fmtMXN(importe)} · pagos 12, 24, 36…`
+        ? `${cantidad} × ${fmtMXN(importe)} · primera: ${primeraFecha}`
         : 'Sin anualidades';
     }
 
@@ -364,6 +476,9 @@
       const row = res.rows?.[index];
       const td = document.createElement('td');
       td.textContent = row?.anualidadTotal > 0 ? fmtMXN(row.anualidadTotal) : '—';
+      if (row?.fechaAnualidadProgramada) {
+        td.title = `Fecha anualidad: ${formatDateHuman(row.fechaAnualidadProgramada)}`;
+      }
       const pagoCell = tr.children[6] || null;
       tr.insertBefore(td, pagoCell);
       tr.classList.toggle('fin-anualidad', Boolean(row?.anualidadTotal > 0));
@@ -375,6 +490,8 @@
     if (control('pagosAnuales')) control('pagosAnuales').value = '';
     if (control('importeAnualidad')) control('importeAnualidad').value = '';
     if (control('resAnualidad')) control('resAnualidad').textContent = '—';
+    fechaAnualidadEditadaManualmente = false;
+    sincronizarFechaPrimerAnualidad(true);
   };
 
   buildShareText = function buildShareTextConAnualidades(res) {
@@ -382,12 +499,74 @@
     const cantidad = Number(res.pagosAnualesEfectivos ?? res.pagosAnuales ?? 0);
     if (!(cantidad > 0)) return texto;
 
-    const linea = `Anualidad: ${cantidad} pago(s) de ${fmtMXN(res.importeAnualidad || 0)} en los pagos 12, 24, 36…`;
+    const primeraFecha = fechaValida(res.fechaPrimerAnualidad)
+      ? formatDateHuman(res.fechaPrimerAnualidad)
+      : '—';
+    const linea = `Anualidades: ${cantidad} pago(s) de ${fmtMXN(res.importeAnualidad || 0)} · primera fecha: ${primeraFecha}`;
     const lineas = texto.split('\n');
     const indiceTotal = lineas.findIndex((lineaActual) => lineaActual.startsWith('Total (suma de pagos):'));
     if (indiceTotal >= 0) lineas.splice(indiceTotal, 0, linea);
     else lineas.push(linea);
     return lineas.join('\n');
+  };
+
+  function detalleAnualidadesPDF(res) {
+    const cantidad = Number(res?.pagosAnualesEfectivos ?? res?.pagosAnuales ?? 0);
+    if (!(cantidad > 0)) {
+      return 'Cantidad de pagos: 0 · Importe: — · Fecha primer pago: —';
+    }
+
+    const fecha = fechaValida(res?.fechaPrimerAnualidad)
+      ? formatDateHuman(res.fechaPrimerAnualidad)
+      : '—';
+    return `Cantidad de pagos: ${cantidad} · Importe: ${fmtMXN(res.importeAnualidad || 0)} · Fecha primer pago: ${fecha}`;
+  }
+
+  generarPDF = async function generarPDFConDetalleAnualidades(opts = {}) {
+    const ctor = window.jspdf?.jsPDF;
+    const api = ctor?.API;
+    if (!api?.text || !api?.autoTable) return originalGenerarPDF(opts);
+
+    const textOriginal = api.text;
+    const autoTableOriginal = api.autoTable;
+    const desplazamiento = 14;
+    let insertar = true;
+    let desplazarDetalle = false;
+
+    api.text = function textConAnualidades(text, x, y, ...rest) {
+      const valor = Array.isArray(text) ? '' : String(text ?? '');
+
+      if (insertar && valor === 'Meses:' && Number.isFinite(Number(y))) {
+        textOriginal.call(this, 'Anualidades:', x, y);
+        this.setFont('helvetica', 'normal');
+        textOriginal.call(this, detalleAnualidadesPDF(lastResult), Number(x) + 160, y);
+        this.setFont('helvetica', 'bold');
+        insertar = false;
+        desplazarDetalle = true;
+        return textOriginal.call(this, text, x, Number(y) + desplazamiento, ...rest);
+      }
+
+      if (desplazarDetalle && Number.isFinite(Number(y))) {
+        return textOriginal.call(this, text, x, Number(y) + desplazamiento, ...rest);
+      }
+
+      return textOriginal.call(this, text, x, y, ...rest);
+    };
+
+    api.autoTable = function autoTableConAnualidades(options = {}) {
+      const ajustadas = desplazarDetalle && Number.isFinite(Number(options?.startY))
+        ? { ...options, startY: Number(options.startY) + desplazamiento }
+        : options;
+      desplazarDetalle = false;
+      return autoTableOriginal.call(this, ajustadas);
+    };
+
+    try {
+      return await originalGenerarPDF(opts);
+    } finally {
+      api.text = textOriginal;
+      api.autoTable = autoTableOriginal;
+    }
   };
 
   instalarInterfaz();
