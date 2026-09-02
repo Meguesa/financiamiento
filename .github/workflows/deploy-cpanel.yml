@@ -9,6 +9,7 @@ on:
       - 'index.php'
       - 'app.js'
       - 'anualidades.js'
+      - 'pdf-anualidades.js'
       - 'solicitud-integracion.js'
       - 'styles.css'
       - 'portal-integration.css'
@@ -49,6 +50,7 @@ jobs:
           test -s index.php
           test -s app.js
           test -s anualidades.js
+          test -s pdf-anualidades.js
           test -s solicitud-integracion.js
           test -s styles.css
           test -s portal-integration.css
@@ -62,8 +64,11 @@ jobs:
           grep -q 'firmaCanvas' app.js
           grep -q 'Pagos anuales' anualidades.js
           grep -q 'importeAnualidad' anualidades.js
+          grep -q 'Cantidad de Pagos' pdf-anualidades.js
+          grep -q 'Fecha primer pago' pdf-anualidades.js
           grep -q 'Aplicar a Solicitud de Venta' solicitud-integracion.js
           grep -q 'anualidades.js' solicitud-integracion.js
+          grep -q 'pdf-anualidades.js' index.php
           grep -q 'solicitud-integracion.js' index.php
 
       - name: Preparar paquete de publicacion
@@ -71,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p deploy
-          cp index.php app.js anualidades.js solicitud-integracion.js styles.css portal-integration.css account-menu.css manifest.webmanifest sw.js deploy/
+          cp index.php app.js anualidades.js pdf-anualidades.js solicitud-integracion.js styles.css portal-integration.css account-menu.css manifest.webmanifest sw.js deploy/
           cp -R assets deploy/assets
           cp -R icons deploy/icons
 
