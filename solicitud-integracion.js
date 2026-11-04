@@ -4,7 +4,7 @@
   if (!window.__jdjpAnualidadesScriptSolicitado && !window.__jdjpAnualidadesFinanciamiento) {
     window.__jdjpAnualidadesScriptSolicitado = true;
     const script = document.createElement('script');
-    script.src = './anualidades.js?v=20260901-anualidades-1';
+    script.src = './anualidades.js?v=20261104-abono-mensualidad-1';
     script.async = false;
     script.onerror = () => console.error('[Financiamiento] No fue posible cargar el modulo de anualidades.');
     document.head.appendChild(script);
