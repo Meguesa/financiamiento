@@ -130,8 +130,8 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     
       <div id="panelPagos" class="accordion-panel" hidden>
         <p class="muted">
-          Esta simulación <strong>mantiene la mensualidad</strong> y <strong>recalcula el plazo</strong>
-          a partir del pago donde se aplica el abono.
+          Elige qué efecto tendrá el abono extraordinario: <strong>reducir el plazo manteniendo la mensualidad</strong>
+          o <strong>mantener el plazo y reducir la mensualidad</strong> a partir del pago siguiente.
         </p>
         
         <label class="field">
@@ -144,6 +144,15 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
           <span>Abono adicional (con IVA)</span>
           <input id="abonoExtra" type="number" inputmode="decimal" placeholder="Ej. 5000" min="0" step="0.01" />
           <small>Se suma al pago de ese mes.</small>
+        </label>
+
+        <label class="field">
+          <span>Efecto del abono</span>
+          <select id="abonoEfecto">
+            <option value="REDUCIR_PLAZO">Mantener mensualidad y reducir plazo</option>
+            <option value="REDUCIR_MENSUALIDAD">Mantener plazo y reducir mensualidad</option>
+          </select>
+          <small>La nueva mensualidad, cuando aplique, inicia en el pago siguiente al abono.</small>
         </label>
     
         <div class="actions">
@@ -201,7 +210,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     </details>
   </footer>
 
-  <script src="./app.js?v=20260902-fin-2"></script>
+  <script src="./app.js?v=20261104-abono-mensualidad-1"></script>
   <script>
   (() => {
     'use strict';
@@ -256,7 +265,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     });
   })();
   </script>
-  <script src="./solicitud-integracion.js?v=20260902-fin-2"></script>
+  <script src="./solicitud-integracion.js?v=20261104-abono-mensualidad-1"></script>
   <script src="./pdf-anualidades.js?v=20260902-pdf-anualidades-1"></script>
 </body>
 </html>
