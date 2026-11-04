@@ -360,11 +360,15 @@
 
     const pagoN = parseInt(ui.abonoPago?.value || '0', 10);
     const extraTotal = Number(ui.abonoExtra?.value || 0);
+    const efecto = ui.abonoEfecto?.value || 'REDUCIR_PLAZO';
     const mesesBase = baseResult.mesesOriginal || baseResult.meses;
     const errs = [];
 
     if (!(pagoN >= 1 && pagoN <= mesesBase)) errs.push(`El número de pago debe estar entre 1 y ${mesesBase}.`);
     if (!(extraTotal > 0)) errs.push('Captura un abono adicional mayor a 0.');
+    if (efecto === 'REDUCIR_MENSUALIDAD' && pagoN >= mesesBase) {
+      errs.push('Para reducir la mensualidad, el abono debe aplicarse antes del último pago.');
+    }
     if (errs.length) {
       alert(errs.join('\n'));
       return;
@@ -378,6 +382,8 @@
     const porIndice = new Map(programacion.map((item) => [item.indicePago, item]));
 
     let saldo = baseResult.financiarSub;
+    let pagoSubActual = baseResult.pagoSub;
+    let mensualidadNueva = baseResult.mensualidad;
     const rows = [];
     let totalPagosC = 0;
 
@@ -385,7 +391,7 @@
       const fecha = addMonths(baseResult.primerPago, n - 1);
       const saldoInicial = saldo;
       const interes = round2(saldo * baseResult.rate);
-      let capitalMensual = round2(baseResult.pagoSub - interes);
+      let capitalMensual = round2(pagoSubActual - interes);
       const eventoAnualidad = porIndice.get(n) || null;
       let anualidadCapital = eventoAnualidad ? anualidadCapitalPlaneada : 0;
       let abonoCapital = n === pagoN ? extraCapitalSubPlaneado : 0;
@@ -403,6 +409,35 @@
       }
 
       let saldoFinal = round2(saldo - capitalTotal);
+
+      // En modo reducir mensualidad, el pago extraordinario conserva la fecha
+      // final original. Las anualidades posteriores siguen programadas y se
+      // consideran al recalcular la mensualidad desde el pago siguiente.
+      if (efecto === 'REDUCIR_MENSUALIDAD' && n === pagoN && saldoFinal > 0) {
+        const mesesRestantes = mesesBase - n;
+        const indicesAnualidadesRestantes = programacion
+          .filter((item) => item.indicePago > n)
+          .map((item) => item.indicePago - n);
+
+        if (mesesRestantes > 0) {
+          const recalculado = pagoMensualConAnualidades(
+            saldoFinal,
+            baseResult.rate,
+            mesesRestantes,
+            anualidadCapitalPlaneada,
+            indicesAnualidadesRestantes
+          );
+
+          if (!Number.isFinite(recalculado) || recalculado < 0) {
+            alert('El abono y las anualidades configuradas no permiten recalcular una mensualidad válida para el plazo restante.');
+            return;
+          }
+
+          pagoSubActual = round2(recalculado);
+          mensualidadNueva = round2(pagoSubActual * (1 + baseResult.ivaRate));
+        }
+      }
+
       if (n === mesesBase && saldoFinal !== 0) {
         capitalMensual = round2(capitalMensual + saldoFinal);
         capitalTotal = round2(capitalMensual + anualidadCapital + abonoCapital);
@@ -433,16 +468,18 @@
 
       totalPagosC += toCents(pagoTotal);
       saldo = saldoFinal;
-      if (saldo <= 0) break;
+      if (efecto === 'REDUCIR_PLAZO' && saldo <= 0) break;
     }
 
     lastResult = {
       ...baseResult,
       mode: 'abono',
-      meses: rows.length,
+      abonoEfecto: efecto,
+      meses: efecto === 'REDUCIR_MENSUALIDAD' ? mesesBase : rows.length,
       rows,
       totalPagos: fromCents(totalPagosC),
-      mensualidad: baseResult.mensualidad,
+      mensualidadOriginal: baseResult.mensualidad,
+      mensualidad: efecto === 'REDUCIR_MENSUALIDAD' ? mensualidadNueva : baseResult.mensualidad,
       abonoPagoN: pagoN,
       abonoExtra: extraTotal,
       pagosAnualesEfectivos: rows.filter((row) => row.anualidadTotal > 0).length
