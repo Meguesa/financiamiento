@@ -4,7 +4,7 @@
   if (!window.__jdjpAnualidadesScriptSolicitado && !window.__jdjpAnualidadesFinanciamiento) {
     window.__jdjpAnualidadesScriptSolicitado = true;
     const script = document.createElement('script');
-    script.src = './anualidades.js?v=20261104-abono-mensualidad-1';
+    script.src = './anualidades.js?v=20261109-liquidacion-1';
     script.async = false;
     script.onerror = () => console.error('[Financiamiento] No fue posible cargar el modulo de anualidades.');
     document.head.appendChild(script);
@@ -176,7 +176,17 @@
           meses: Number(lastResult.meses || 0),
           primerPago: primerPagoIso,
           diaPago: Number(primerPagoIso.slice(8, 10) || 0),
-          mensualidad: Number(lastResult.mensualidad || 0),
+          // La mensualidad inicial del crédito permanece vigente hasta el
+          // pago extraordinario. La posterior queda en cero al liquidar.
+          mensualidad: Number(
+            lastResult.liquidacionAnticipada
+              ? (lastResult.mensualidadOriginal || 0)
+              : (lastResult.mensualidad || 0)
+          ),
+          mensualidadPosteriorAbono: Number(lastResult.mensualidad || 0),
+          abonoPagoN: Number(lastResult.abonoPagoN || 0),
+          abonoExtraAplicado: Number(lastResult.abonoExtra || 0),
+          liquidacionAnticipada: Boolean(lastResult.liquidacionAnticipada),
           periodoPagos: 'MENSUAL',
           pagosAnuales: Number(lastResult.pagosAnualesEfectivos ?? lastResult.pagosAnuales ?? 0),
           importeAnualidad: Number(lastResult.importeAnualidad || 0),
