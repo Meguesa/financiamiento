@@ -386,6 +386,8 @@
     let mensualidadNueva = baseResult.mensualidad;
     const rows = [];
     let totalPagosC = 0;
+    let abonoAplicadoTotal = 0;
+    let liquidacionPorAbono = false;
 
     for (let n = 1; n <= mesesBase; n += 1) {
       const fecha = addMonths(baseResult.primerPago, n - 1);
@@ -449,6 +451,7 @@
       const pagoTotal = round2(baseIVA + ivaPago);
       const anualidadTotal = round2(anualidadCapital * (1 + baseResult.ivaRate));
       const abonoExtraTotal = round2(abonoCapital * (1 + baseResult.ivaRate));
+      if (n === pagoN) abonoAplicadoTotal = abonoExtraTotal;
 
       rows.push({
         n,
@@ -468,20 +471,25 @@
 
       totalPagosC += toCents(pagoTotal);
       saldo = saldoFinal;
-      if (efecto === 'REDUCIR_PLAZO' && saldo <= 0) break;
+      if (saldo <= 0) {
+        liquidacionPorAbono = n === pagoN && abonoCapital > 0 && n < mesesBase;
+        break;
+      }
     }
 
     lastResult = {
       ...baseResult,
       mode: 'abono',
       abonoEfecto: efecto,
-      meses: efecto === 'REDUCIR_MENSUALIDAD' ? mesesBase : rows.length,
+      meses: liquidacionPorAbono ? rows.length : (efecto === 'REDUCIR_MENSUALIDAD' ? mesesBase : rows.length),
       rows,
       totalPagos: fromCents(totalPagosC),
       mensualidadOriginal: baseResult.mensualidad,
-      mensualidad: efecto === 'REDUCIR_MENSUALIDAD' ? mensualidadNueva : baseResult.mensualidad,
+      mensualidad: liquidacionPorAbono ? 0 : (efecto === 'REDUCIR_MENSUALIDAD' ? mensualidadNueva : baseResult.mensualidad),
+      liquidacionAnticipada: liquidacionPorAbono,
       abonoPagoN: pagoN,
-      abonoExtra: extraTotal,
+      abonoExtraCapturado: extraTotal,
+      abonoExtra: abonoAplicadoTotal,
       pagosAnualesEfectivos: rows.filter((row) => row.anualidadTotal > 0).length
     };
 
