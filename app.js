@@ -408,14 +408,20 @@ function simularAbonoCapital(){
   let mensualidadNueva = mensualidadBase;
   const rows = [];
   let totalPagosC = 0;
+  let abonoAplicadoTotal = 0;
+  let liquidacionPorAbono = false;
 
   for (let n = 1; n <= mesesBase; n++){
     const fecha = addMonths(baseResult.primerPago, n - 1);
     const interes = round2(saldo * rate);
-    const extraCapSub = n === pagoN ? extraCapitalSub : 0;
-
-    let capital = round2((pagoSubActual - interes) + extraCapSub);
-    if (capital >= saldo) capital = round2(saldo);
+    const capitalMensual = Math.min(saldo, round2(Math.max(0, pagoSubActual - interes)));
+    // El abono no puede superar el capital pendiente tras la cuota ordinaria.
+    const extraCapSub = n === pagoN
+      ? Math.min(extraCapitalSub, Math.max(0, round2(saldo - capitalMensual)))
+      : 0;
+    let capital = round2(capitalMensual + extraCapSub);
+    if (capital > saldo) capital = round2(saldo);
+    if (n === pagoN) abonoAplicadoTotal = round2(extraCapSub * (1 + baseResult.ivaRate));
 
     let saldoFinal = round2(saldo - capital);
 
@@ -449,26 +455,31 @@ function simularAbonoCapital(){
       iva: ivaPago,
       pago: pagoTotal,
       saldoFinal,
-      abonoExtraTotal: n === pagoN ? extraTotal : 0
+      abonoExtraTotal: n === pagoN ? abonoAplicadoTotal : 0
     });
 
     totalPagosC += toCents(pagoTotal);
     saldo = saldoFinal;
 
-    if (efecto === 'REDUCIR_PLAZO' && saldo <= 0) break;
+    if (saldo <= 0) {
+      liquidacionPorAbono = n === pagoN && extraCapSub > 0 && n < mesesBase;
+      break;
+    }
   }
 
   lastResult = {
     ...baseResult,
     mode: 'abono',
     abonoEfecto: efecto,
-    meses: efecto === 'REDUCIR_MENSUALIDAD' ? mesesBase : rows.length,
+    meses: liquidacionPorAbono ? rows.length : (efecto === 'REDUCIR_MENSUALIDAD' ? mesesBase : rows.length),
     rows,
     totalPagos: fromCents(totalPagosC),
     mensualidadOriginal: mensualidadBase,
-    mensualidad: efecto === 'REDUCIR_MENSUALIDAD' ? mensualidadNueva : mensualidadBase,
+    mensualidad: liquidacionPorAbono ? 0 : (efecto === 'REDUCIR_MENSUALIDAD' ? mensualidadNueva : mensualidadBase),
+    liquidacionAnticipada: liquidacionPorAbono,
     abonoPagoN: pagoN,
-    abonoExtra: extraTotal
+    abonoExtraCapturado: extraTotal,
+    abonoExtra: abonoAplicadoTotal
   };
 
   render(lastResult);
@@ -509,7 +520,10 @@ function render(res){
   ui.resIva.textContent = fmtMXN(res.ivaTotal);
 
   if (res.mode === 'abono'){
-    if (res.abonoEfecto === 'REDUCIR_MENSUALIDAD'){
+    if (res.liquidacionAnticipada){
+      ui.resEnganche.textContent =
+        `Liquidación total en pago #${res.abonoPagoN} · Abono aplicado: ${fmtMXN(res.abonoExtra)} · Sin cuotas posteriores · Plazo efectivo: ${res.meses} meses`;
+    } else if (res.abonoEfecto === 'REDUCIR_MENSUALIDAD'){
       ui.resEnganche.textContent =
         `Abono en pago #${res.abonoPagoN}: +${fmtMXN(res.abonoExtra)} · Mensualidad anterior: ${fmtMXN(res.mensualidadOriginal)} · Nueva mensualidad: ${fmtMXN(res.mensualidad)} · Plazo: ${res.meses} meses`;
     } else {
@@ -666,16 +680,22 @@ async function generarPDF(opts = {}){
 
   if (lastResult.mode === 'abono'){
     const reduceMensualidad = lastResult.abonoEfecto === 'REDUCIR_MENSUALIDAD';
+    const liquidado = Boolean(lastResult.liquidacionAnticipada);
     const detalleAbono = [
       { label: 'Abono:', value: `Pago #${lastResult.abonoPagoN} · +${fmtMXN(lastResult.abonoExtra)} (con IVA)` },
       {
         label: 'Efecto del abono:',
-        value: reduceMensualidad
-          ? 'Mantener plazo y reducir mensualidad'
-          : 'Mantener mensualidad y reducir plazo'
+        value: liquidado
+          ? 'Liquidación anticipada: sin pagos posteriores'
+          : (reduceMensualidad ? 'Mantener plazo y reducir mensualidad' : 'Mantener mensualidad y reducir plazo')
       }
     ];
-    if (reduceMensualidad){
+    if (liquidado){
+      detalleAbono.push(
+        { label: 'Mensualidad posterior:', value: fmtMXN(0) },
+        { label: 'Plazo efectivo:', value: `${lastResult.meses} pagos` }
+      );
+    } else if (reduceMensualidad){
       detalleAbono.push(
         { label: 'Mensualidad anterior:', value: fmtMXN(lastResult.mensualidadOriginal) },
         { label: 'Plazo conservado:', value: `${lastResult.meses} pagos` }
@@ -866,7 +886,11 @@ function buildShareText(res){
   lines.push(`Total (suma de pagos): ${fmtMXN(res.totalPagos)}`);
 
   if (res.mode === 'abono'){
-    if (res.abonoEfecto === 'REDUCIR_MENSUALIDAD'){
+    if (res.liquidacionAnticipada){
+      lines.push('Efecto: Liquidación anticipada del saldo');
+      lines.push(`Abono aplicado: ${fmtMXN(res.abonoExtra)}`);
+      lines.push(`Plazo efectivo: ${res.meses} meses · Cuotas posteriores: $0.00`);
+    } else if (res.abonoEfecto === 'REDUCIR_MENSUALIDAD'){
       lines.push('Efecto: Mantener plazo y disminuir mensualidad');
       lines.push(`Mensualidad anterior: ${fmtMXN(res.mensualidadOriginal)}`);
       lines.push(`Nueva mensualidad: ${fmtMXN(res.mensualidad)}`);

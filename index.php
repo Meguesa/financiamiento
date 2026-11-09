@@ -210,7 +210,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     </details>
   </footer>
 
-  <script src="./app.js?v=20261104-abono-mensualidad-1"></script>
+  <script src="./app.js?v=20261109-liquidacion-1"></script>
   <script>
   (() => {
     'use strict';
@@ -265,7 +265,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
     });
   })();
   </script>
-  <script src="./solicitud-integracion.js?v=20261104-abono-mensualidad-1"></script>
+  <script src="./solicitud-integracion.js?v=20261109-liquidacion-1"></script>
   <script src="./pdf-anualidades.js?v=20260902-pdf-anualidades-1"></script>
 </body>
 </html>
